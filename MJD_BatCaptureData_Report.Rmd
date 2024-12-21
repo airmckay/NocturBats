@@ -1,0 +1,163 @@
+---
+title: "MJD_BatCaptureData_Report"
+output: html_document
+date: "2024-12-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Consolidate Bat box and mist net survey capture data from 2024 and 2023
+Report findings to Miljødirektoratet and to Artsobservasjoner
+
+
+## Set up the work space
+```{r}
+
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(tidy = "styler")
+
+#### Load libraries ####
+library(data.table)
+library(tidyverse)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(renv)
+library(stringr)
+library(janitor)
+
+## Set up output directory
+
+output <-"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" # where you want to save your data
+
+file.name <- "CleanBatCaptureData2024"
+
+todays_date <- Sys.Date()
+ 
+
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2024_2024-12-21
+
+boxcap <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Bat captures/survey123_BatCapture_2024.csv", 
+    col_types = cols(ObjectID = col_skip()))
+
+boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/Bat Box Site Overview v2.xlsx")
+
+sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/survey123_batboxoverivew_2024.csv")
+```
+
+## House keeping
+Subset the datasets to only include the relevant columns 
+```{r}
+bcap <- boxcap %>% 
+  select('Bat box ID', 'Bat ID', 'Sex and reproductive status', 
+                          'Right forearm length (mm)', "Weight (g)", 
+                          "Band number", "Bat species", "Age") %>% 
+  rename(BBid = 'Bat box ID',
+         BatID  = 'Bat ID',
+         SexRep = 'Sex and reproductive status',
+         RFA = 'Right forearm length (mm)',
+         Weight = "Weight (g)",
+         BandNumber = "Band number", 
+         Species = "Bat species") %>% 
+  mutate(BBid = factor(BBid), 
+         SexRep = factor(SexRep), 
+         Species = factor(Species),
+         Age= factor(Age))  
+
+## Make new columns which create a more unique bat ID and which make sex and repro separate columns
+## Create  a new column for swollen buccal glands
+
+head(bcap$SexRep)
+
+  bcap1 <- bcap %>% 
+    mutate(
+      Bid = factor(paste0(BBid, "_", BatID)),
+      sex = factor(case_when(
+        str_detect(SexRep, "Female") ~ "Female",
+        str_detect(SexRep, "Male") ~ "Male"))) %>% 
+    mutate(buccal = factor(case_when(
+      str_detect(SexRep, "swollen") ~ "Swollen buccal glands", 
+      TRUE ~ "Buccal glands not visibly swollen"
+    )))
+
+summary(bcap1$sex)
+summary(bcap1$buccal)
+## Now create the repro column 
+
+bcap1$rep1 <- factor(gsub("Female:_", "", bcap1$SexRep)) 
+bcap1$rep2 <- factor(gsub("Male:_", "", bcap1$rep1))
+bcap1$rep3 <- factor(gsub("_swollen_buccal_", "", bcap1$rep2))
+bcap1$rep4 <- factor(gsub("swollen_buccal_", "", bcap1$rep3))
+bcap1$rep5 <- factor(gsub(",", "", bcap1$rep4))
+bcap1$rep6 <- factor(gsub("1_", "1", bcap1$rep5))
+bcap1$rep7 <- factor(gsub("lactating_", "lactating", bcap1$rep6))
+bcap1$Species <- factor(gsub("PIPPYG", "PPYG", bcap1$Species))
+
+summary(bcap1$rep7)
+
+bcap2 <- bcap1 %>% select(rep7, buccal, sex, 
+                          Bid, BBid, RFA, 
+                          Weight, BandNumber, 
+                          Species, Age) %>% 
+  rename(Rep = rep7) %>% 
+  mutate(Repro = factor(case_when(
+    Rep == "1" ~ "Non-reproductive",
+    Rep == "2" ~ "Testes enlarged, sperm production phase",
+    Rep == "3" ~ "Testes enlarged and epididymis distended, sperm production and storage phase",
+    Rep == "4" ~ "Tests regressed and epididymis distended, sperm storage phase",
+    TRUE ~ Rep
+  ))) %>% select(-Rep)
+
+summary(bcap2$Repro) 
+summary(bcap2)
+
+write.csv(bcap2, file = file.path(output_today, "cleaned_bat_box_captures_2024.csv"))
+#21.12.2024
+
+```
+
+## Now clean the bat box data
+
+```{r}
+
+box1 <- boxes %>% 
+  rename(Bid = 'box id',
+         loc = location, 
+         lat = latitude, 
+         lon = longitude) %>%
+  dplyr::select(Bid, loc, lat, lon) %>% 
+           mutate(Bid = factor(Bid), 
+                  loc = factor(loc),
+                  lon = as.character(lon), 
+                  lat = as.character(lat)) 
+
+sbox1 <- sboxes %>% 
+  rename(Bid = 'Bat Box ID',
+         loc = Location,
+         lat = 'Latitude (N)',
+         lon = 'Longitude (E)') %>% 
+    dplyr::select(Bid, loc, lat, lon) %>% 
+           mutate(Bid = factor(Bid), 
+                  loc = factor(loc),
+                  lat = as.character(lat))
+
+boxdf <- full_join(box1,sbox1) 
+summary(boxdf)  
+
+## PRETTY CLOSE! BUT NOT QUITE
+
+
+```
+
