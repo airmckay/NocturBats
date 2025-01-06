@@ -29,6 +29,8 @@ library(purrr)
 library(renv)
 library(stringr)
 library(janitor)
+library(readr)
+library(readxl)
 
 ## Set up output directory
 
@@ -47,24 +49,30 @@ output_today
 
 dir.create(output_today)
 output_today
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2024_2024-12-21
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2024_2025-01-06
 
-boxcap <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Bat captures/survey123_BatCapture_2024.csv", 
+boxcap <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Bat captures/survey123_BatCaptures_2024_v3.csv", 
     col_types = cols(ObjectID = col_skip()))
+# 78 obs 25
 
-boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/Bat Box Site Overview v2.xlsx")
+boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/Bat Box Site Overview v3.xlsx")
+# 62 obs 20
 
-sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/survey123_batboxoverivew_2024.csv")
+sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/survey123_batboxoverivew_2024_v2.csv")
+# 81 obs 28
+
 ```
 
 ## House keeping
 Subset the datasets to only include the relevant columns 
 ```{r}
 bcap <- boxcap %>% 
-  select('Bat box ID', 'Bat ID', 'Sex and reproductive status', 
+  select('Date and time of capture',
+    'Bat box ID', 'Bat ID', 'Sex and reproductive status', 
                           'Right forearm length (mm)', "Weight (g)", 
                           "Band number", "Bat species", "Age") %>% 
-  rename(BBid = 'Bat box ID',
+  rename(DateTime = 'Date and time of capture',
+         BBid = 'Bat box ID',
          BatID  = 'Bat ID',
          SexRep = 'Sex and reproductive status',
          RFA = 'Right forearm length (mm)',
@@ -110,7 +118,7 @@ summary(bcap1$rep7)
 bcap2 <- bcap1 %>% select(rep7, buccal, sex, 
                           Bid, BBid, RFA, 
                           Weight, BandNumber, 
-                          Species, Age) %>% 
+                          Species, Age, DateTime) %>% 
   rename(Rep = rep7) %>% 
   mutate(Repro = factor(case_when(
     Rep == "1" ~ "Non-reproductive",
@@ -123,8 +131,14 @@ bcap2 <- bcap1 %>% select(rep7, buccal, sex,
 summary(bcap2$Repro) 
 summary(bcap2)
 
+head(bcap2$DateTime)
+# 8/16/2024 9:18:00 AM
+
+bcap2$datetime <- as.POSIXct(bcap2$DateTime, format = "%m/%d/%Y %I:%M:%S %p")
+# 8/16/2024 9:18:00 AM
+
 write.csv(bcap2, file = file.path(output_today, "cleaned_bat_box_captures_2024.csv"))
-#21.12.2024
+# 06.01.2025
 
 ```
 
@@ -154,10 +168,41 @@ sbox1 <- sboxes %>%
                   lat = as.character(lat))
 
 boxdf <- full_join(box1,sbox1) 
-summary(boxdf)  
+# 143 obs 
 
+boxdf <- boxdf %>% rename(BBid = Bid) 
+# Bid is 76 levels
+
+summary(bcap2)
 ## PRETTY CLOSE! BUT NOT QUITE
+
+```
+
+
+## Now combine bat capture data with the bat box location data 
+```{r}
+#Bid is Bat ID and BBid is Bat Box ID
+DF <- left_join(bcap2, boxdf) 
+summary(DF)
+
+## Some of the captures are missing bat box ID location information - explore further
+DF1 <- DF %>% filter(is.na(loc)) %>% droplevels()
+summary(DF1)
+
+levels(DF1$BBid)
+# "BB-GR-001"  
+# "BB-GR-035"  
+# "BB-MO-215"  
+# "BB-RE-017"  
+# "BJARNE-001" 
+# "NZF-MO-302" 
+# "NZF-MO-304" 
+# "NZF-RE-005" 
+# "NZF-RE-024"
+
+## Closer but still some issues - reupload the survey 123 datasheets and bat box overview, try again 
 
 
 ```
+
 
