@@ -16,7 +16,6 @@ Report findings to Miljødirektoratet and to Artsobservasjoner
 
 ## Set up the work space
 ```{r}
-
 knitr::opts_chunk$set(echo = F)
 knitr::opts_chunk$set(tidy = "styler")
 
@@ -31,6 +30,24 @@ library(stringr)
 library(janitor)
 library(readr)
 library(readxl)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(mapview)
+library(sf)
+library(sp)
+library(maps)
+library(leaflet)
+library(randomcoloR)
+library(wesanderson)
+library(leaflegend)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(ggmap)
+library(maptools)
+library(spatstat)
 
 ## Set up output directory
 
@@ -49,16 +66,16 @@ output_today
 
 dir.create(output_today)
 output_today
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2024_2025-01-06
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2024_2025-01-07
 
-boxcap <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Bat captures/survey123_BatCaptures_2024_v3.csv", 
+boxcap <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/BatCaptures/survey123_BatCaptures_2024_v6.csv", 
     col_types = cols(ObjectID = col_skip()))
 # 78 obs 25
 
-boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/Bat Box Site Overview v3.xlsx")
-# 62 obs 20
+boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2024/Bat Box Site Overview v3.xlsx")
+# 69 obs 20
 
-sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/Bat_Boxes/Site Information/survey123_batboxoverivew_2024_v2.csv")
+sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2024/Survery123/survey123_BatBoxOverview_2024_v6.csv")
 # 81 obs 28
 
 ```
@@ -67,7 +84,10 @@ sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Scienc
 Subset the datasets to only include the relevant columns 
 ```{r}
 bcap <- boxcap %>% 
-  select('Date and time of capture',
+  dplyr::select('Date and time of capture',
+         'Crew member filling in form',
+         'Other - Crew member filling in form',
+         'Crew member processing the bat',
     'Bat box ID', 'Bat ID', 'Sex and reproductive status', 
                           'Right forearm length (mm)', "Weight (g)", 
                           "Band number", "Bat species", "Age") %>% 
@@ -78,11 +98,18 @@ bcap <- boxcap %>%
          RFA = 'Right forearm length (mm)',
          Weight = "Weight (g)",
          BandNumber = "Band number", 
-         Species = "Bat species") %>% 
+         Species = "Bat species",
+         Crew1 = 'Crew member filling in form', 
+         Crew2 = 'Other - Crew member filling in form',
+         Crew3 = 'Crew member processing the bat') %>% 
   mutate(BBid = factor(BBid), 
          SexRep = factor(SexRep), 
          Species = factor(Species),
-         Age= factor(Age))  
+         Age= factor(Age), 
+         Crew = paste0(Crew1, ",",
+         Crew2, ",",
+         Crew3)) %>% 
+  dplyr::select(-c(Crew1, Crew2, Crew3)) 
 
 ## Make new columns which create a more unique bat ID and which make sex and repro separate columns
 ## Create  a new column for swollen buccal glands
@@ -115,10 +142,10 @@ bcap1$Species <- factor(gsub("PIPPYG", "PPYG", bcap1$Species))
 
 summary(bcap1$rep7)
 
-bcap2 <- bcap1 %>% select(rep7, buccal, sex, 
+bcap2 <- bcap1 %>% dplyr::select(rep7, buccal, sex, 
                           Bid, BBid, RFA, 
                           Weight, BandNumber, 
-                          Species, Age, DateTime) %>% 
+                          Species, Age, DateTime, Crew) %>% 
   rename(Rep = rep7) %>% 
   mutate(Repro = factor(case_when(
     Rep == "1" ~ "Non-reproductive",
@@ -126,7 +153,7 @@ bcap2 <- bcap1 %>% select(rep7, buccal, sex,
     Rep == "3" ~ "Testes enlarged and epididymis distended, sperm production and storage phase",
     Rep == "4" ~ "Tests regressed and epididymis distended, sperm storage phase",
     TRUE ~ Rep
-  ))) %>% select(-Rep)
+  ))) %>% dplyr::select(-Rep)
 
 summary(bcap2$Repro) 
 summary(bcap2)
@@ -134,18 +161,29 @@ summary(bcap2)
 head(bcap2$DateTime)
 # 8/16/2024 9:18:00 AM
 
-bcap2$datetime <- as.POSIXct(bcap2$DateTime, format = "%m/%d/%Y %I:%M:%S %p")
+bcap2$datetime <- as.POSIXct(bcap2$DateTime, format = "%m/%d/%Y %I:%M:%S %p", tz = "CET")
 # 8/16/2024 9:18:00 AM
+head(bcap2$datetime)
 
-write.csv(bcap2, file = file.path(output_today, "cleaned_bat_box_captures_2024.csv"))
-# 06.01.2025
+## This is two hours behind what is recorded in the datasheets
+## Create a unique bat ID 
+bcap3 <- bcap2 %>% 
+  mutate(datetime = datetime + hours(2)) %>% 
+  dplyr::select(-DateTime) %>% 
+  mutate(Date = as.Date(datetime), 
+         ubid = factor(paste0(Bid, "-", Date))) 
+
+
+#  write.csv(bcap3, file = file.path(output_today, cleaned_bat_box_captures_2024_simpple_columns.csv"))
+# 78 obs 13 vars 
+# 07.01.2025
 
 ```
 
 ## Now clean the bat box data
 
 ```{r}
-
+# Clean the bat box data from the excel overview 
 box1 <- boxes %>% 
   rename(Bid = 'box id',
          loc = location, 
@@ -155,8 +193,14 @@ box1 <- boxes %>%
            mutate(Bid = factor(Bid), 
                   loc = factor(loc),
                   lon = as.character(lon), 
-                  lat = as.character(lat)) 
+                  lat = as.character(lat)) %>% 
+  dplyr::filter(Bid != "BB-MO-081", 
+                Bid != "BB-RA-096", 
+                Bid != "BB-RE-007") %>% 
+  droplevels()
+levels(box1$Bid)
 
+# clean the Survey 123 bat box data
 sbox1 <- sboxes %>% 
   rename(Bid = 'Bat Box ID',
          loc = Location,
@@ -167,41 +211,148 @@ sbox1 <- sboxes %>%
                   loc = factor(loc),
                   lat = as.character(lat))
 
-boxdf <- full_join(box1,sbox1) 
-# 143 obs 
+## Now combine for all bat box location data
+boxdf <- full_join(box1,sbox1) %>% rename(BBid = Bid) 
+# 146 obs 
 
-boxdf <- boxdf %>% rename(BBid = Bid) 
-# Bid is 76 levels
 
-summary(bcap2)
-## PRETTY CLOSE! BUT NOT QUITE
+
+## Check for duplicate bat box info!! 
+
+# test <- duplicated_rows_dplyr <- boxdf |>
+#   group_by(BBid) |>
+#   filter(n() > 1) |>
+#   ungroup()
+
+# Innitially found duplicates BB-MO-081, BB-RA-096, and BB-RE-007 - removed from the excel file df 
+# (See above) 
+
+
+## Clean the locality information category
+levels(boxdf$loc)
+#  [1] "Bjarne"                   "Mosvatnet"                "Raulemyra"               
+#  [4] "Rennesøy"                 "Revehamn"                 "Grødeim (GR)"            
+#  [7] "Hornesvatnet (HO)"        "Kjosavik (KJ)"            "Litla Stokkavatnet (LS)_"
+# [10] "Lædre (LA)"               "Raulemyra (RA)"           "Rennesøy (RE)"           
+# [13] "�\u0086grehaug (AE)"   
+
+boxdf1 <- boxdf %>% mutate(
+  Locality = factor(case_when(
+  loc %in% "Bjarne" ~ "Bjarne",
+  str_detect(loc, "Mosvatnet") ~ "Mosvatnet", 
+  str_detect(loc, "(GR)") ~ "Grodeim", 
+  str_detect(loc, "Hornesvatnet") ~ "Hornesvatnet", 
+  str_detect(loc, "Kjosavik") ~ "Kjosavik",
+  str_detect(loc, "(LA)") ~ "Laedre", 
+  str_detect(loc, "Raulemyra")  ~ "Raulemyra", 
+  str_detect(loc, "Rennes") ~ "Rennesoy", 
+  loc %in% "Revehamn" ~ "Revehamn",
+  str_detect(loc, "(AE)")~ "Aegrehaug", 
+  str_detect(BBid, "BB-LS") ~ "Litla Stokkavatnet" 
+    ))) %>% mutate(
+  LocalCode = factor(case_when(
+  loc %in% "Bjarne" ~ "BJ",
+  str_detect(loc, "Mosvatnet") ~ "MO", 
+  str_detect(loc, "(GR)") ~ "GR", 
+  str_detect(loc, "Hornesvatnet") ~ "HO", 
+  str_detect(loc, "Kjosavik") ~ "KJ",
+  str_detect(loc, "(LA)") ~ "LA", 
+  str_detect(loc, "Raulemyra")  ~ "RA", 
+  str_detect(loc, "Rennes") ~ "RE", 
+  loc %in% "Revehamn" ~ "RH",
+  str_detect(loc, "(AE)")~ "AE", 
+  str_detect(BBid, "BB-LS") ~ "LS" 
+    ))) %>% 
+  dplyr::select(-loc) 
+
+levels(boxdf1$Locality)
+levels(boxdf1$LocalCode)
+
+
+## 
+## Now check that the location information makes sense
+##
+
+## Convert lat longs to spatial objects
+
+boxdf2 <- st_as_sf(boxdf1, coords=c("lon", "lat"), crs = "+proj=latlong +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+
+crs(boxdf2$geometry)
+
+# plot(boxdf2)
+
+mapview(boxdf2)
+
+# Looks right!! 
+
+
+# write.csv(boxdf2, file = file.path(output_today, "AllBatBoxLocations_Combined.csv"))
+# 07.01.2025
 
 ```
 
 
 ## Now combine bat capture data with the bat box location data 
 ```{r}
-#Bid is Bat ID and BBid is Bat Box ID
-DF <- left_join(bcap2, boxdf) 
+#Bid is Bat ID and BBid is Bat Box ID 
+DF <- left_join(bcap3, boxdf1) %>% distinct()
+# 78 obs 25 vars 
+
+summary(DF)
+# Innitially: Now we have an additional two observations... why? 
+# One bat ID linked to multiple descriptions of a bat box id most likely ... 
+
+# test <- duplicated_rows_dplyr <- DF |>
+#   group_by(Bid) |>
+#   filter(n() > 1) |>
+#   ungroup()
+
+## Fixed iy
+
+## Duplicate Bids when bats are captured at the same bat box on different dates - therefore created a ubid (unique bat ID) combining Bid and Date 
+
+ 
 summary(DF)
 
-## Some of the captures are missing bat box ID location information - explore further
-DF1 <- DF %>% filter(is.na(loc)) %>% droplevels()
+ggplot(DF) + 
+  geom_bar(aes(x = BBid, fill = Locality)) + 
+  scale_fill_manual(values = 
+                    c("#5b859e", "#1e395f", "#75884b", "#1e5a46", 
+                      "#df8d71", "#af4f2f", "#d48f90", "#732f30",
+                      "#ab84a5", "#59385c", "#d8b847")) + 
+  coord_flip() + 
+  theme_classic() + 
+  xlab("Bat box IDs") + 
+  ylab("Number of bats captured") + 
+  scale_y_continuous(breaks = seq(0, 10, by = 2)) 
+
+## Looks good! Now clean the column names to make them more informative and easier to report to ArtsDatabanken
+
+# write.csv(DF, file = file.path(output_today, "BatCaptureData_w_Locations_2024_simplecolumns.csv"))
+# 07.01.2025
+
+DF1 <- DF %>% 
+  dplyr::select(c(ubid, BandNumber, Date, datetime, Crew,
+                  BBid, Locality, LocalCode, 
+                  lat, lon, 
+                  Bid, Species, 
+                  sex, Age, Repro, buccal,
+                  RFA, Weight)) %>% 
+  rename(UniqueBatID = ubid, 
+         DateTime = datetime, 
+         BatBoxID = BBid, 
+         Latitude = lat, 
+         Longitude = lon, 
+         BatID = Bid, 
+         Sex = sex,
+         Buccal = buccal) %>% 
+  rename('Right forearm length (mm)' = RFA, 
+         'Weight (g)' = Weight) 
+
 summary(DF1)
 
-levels(DF1$BBid)
-# "BB-GR-001"  
-# "BB-GR-035"  
-# "BB-MO-215"  
-# "BB-RE-017"  
-# "BJARNE-001" 
-# "NZF-MO-302" 
-# "NZF-MO-304" 
-# "NZF-RE-005" 
-# "NZF-RE-024"
-
-## Closer but still some issues - reupload the survey 123 datasheets and bat box overview, try again 
-
+# write.csv(DF1, file = file.path(output_today, "BatCaptureData_w_Locations_2024_Clear_Columns.csv"))
+# 07.01.2025
 
 ```
 
