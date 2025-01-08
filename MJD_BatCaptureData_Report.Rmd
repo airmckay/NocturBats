@@ -111,6 +111,8 @@ bcap <- boxcap %>%
          Crew3)) %>% 
   dplyr::select(-c(Crew1, Crew2, Crew3)) 
 
+### Remove "NA's from the crew member lists! 
+
 ## Make new columns which create a more unique bat ID and which make sex and repro separate columns
 ## Create  a new column for swollen buccal glands
 
@@ -139,6 +141,8 @@ bcap1$rep5 <- factor(gsub(",", "", bcap1$rep4))
 bcap1$rep6 <- factor(gsub("1_", "1", bcap1$rep5))
 bcap1$rep7 <- factor(gsub("lactating_", "lactating", bcap1$rep6))
 bcap1$Species <- factor(gsub("PIPPYG", "PPYG", bcap1$Species))
+bcap1$Crew <- gsub("NA,", "", bcap1$Crew)
+bcap1$Crew <- gsub("other,", "", bcap1$Crew)
 
 summary(bcap1$rep7)
 
@@ -176,7 +180,7 @@ bcap3 <- bcap2 %>%
 
 #  write.csv(bcap3, file = file.path(output_today, cleaned_bat_box_captures_2024_simpple_columns.csv"))
 # 78 obs 13 vars 
-# 07.01.2025
+# 08.01.2025
 
 ```
 
@@ -296,7 +300,7 @@ mapview(boxdf2)
 ```{r}
 #Bid is Bat ID and BBid is Bat Box ID 
 DF <- left_join(bcap3, boxdf1) %>% distinct()
-# 78 obs 25 vars 
+# 78 obs 18 vars 
 
 summary(DF)
 # Innitially: Now we have an additional two observations... why? 
@@ -329,7 +333,7 @@ ggplot(DF) +
 ## Looks good! Now clean the column names to make them more informative and easier to report to ArtsDatabanken
 
 # write.csv(DF, file = file.path(output_today, "BatCaptureData_w_Locations_2024_simplecolumns.csv"))
-# 07.01.2025
+# 08.01.2025
 
 DF1 <- DF %>% 
   dplyr::select(c(ubid, BandNumber, Date, datetime, Crew,
@@ -339,6 +343,7 @@ DF1 <- DF %>%
                   sex, Age, Repro, buccal,
                   RFA, Weight)) %>% 
   rename(UniqueBatID = ubid, 
+         SpeciesCode = Species,
          DateTime = datetime, 
          BatBoxID = BBid, 
          Latitude = lat, 
@@ -347,12 +352,17 @@ DF1 <- DF %>%
          Sex = sex,
          Buccal = buccal) %>% 
   rename('Right forearm length (mm)' = RFA, 
-         'Weight (g)' = Weight) 
+         'Weight (g)' = Weight) %>% 
+  mutate(Species = factor(case_when(
+    SpeciesCode == "PPYG" ~ "Pipistrellus pygmaeus",
+    SpeciesCode == "PNAT" ~ "Pipistrellus nathusii"
+  ))) %>% 
+  mutate(Date_ArtsObs = strftime(Date, format = "%Y.%m.%d"))
 
 summary(DF1)
 
 # write.csv(DF1, file = file.path(output_today, "BatCaptureData_w_Locations_2024_Clear_Columns.csv"))
-# 07.01.2025
+# 08.01.2025
 
 ```
 
