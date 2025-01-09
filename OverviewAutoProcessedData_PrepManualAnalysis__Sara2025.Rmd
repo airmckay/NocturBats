@@ -83,30 +83,30 @@ inputCM40$site <- "CM-40"
 # #          obs of 44 vars
 # # Add a site column 
 # inputCM47$site <- "CM-47"
-
-names(inputCM01)
-names(inputCM02)
-names(inputCM46)
-
-# dim(inputCM01) + dim(inputCM02) = 31585
-temp1 <- merge(inputCM01, inputCM02, all = TRUE) 
-
-cm <- merge(temp1, inputCM46, all = TRUE)
-# 31585 + 15304
-# 46889 
-# The number of rows add up - good! 
-
-cm$detector <- "Song Meter Mini Bat 2 Li-ion"
-
-## Now combine cm and noc
-
-df <- merge(cm, noc, all = TRUE) 
-dim(df)
-# 81746    46
-
-dim(cm) + dim(noc) # this matches, good!
-
-# write.csv(df, file = file.path(output_today, "Gismarvik_Utsira_2024_raw_forBenedikte.csv"), row.names = FALSE)
+# 
+# names(inputCM01)
+# names(inputCM02)
+# names(inputCM46)
+# 
+# # dim(inputCM01) + dim(inputCM02) = 31585
+# temp1 <- merge(inputCM01, inputCM02, all = TRUE) 
+# 
+# cm <- merge(temp1, inputCM46, all = TRUE)
+# # 31585 + 15304
+# # 46889 
+# # The number of rows add up - good! 
+# 
+# cm$detector <- "Song Meter Mini Bat 2 Li-ion"
+# 
+# ## Now combine cm and noc
+# 
+# df <- merge(cm, noc, all = TRUE) 
+# dim(df)
+# # 81746    46
+# 
+# dim(cm) + dim(noc) # this matches, good!
+# 
+# # write.csv(df, file = file.path(output_today, "Gismarvik_Utsira_2024_raw_forBenedikte.csv"), row.names = FALSE)
 
 
 ```

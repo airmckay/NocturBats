@@ -127,6 +127,8 @@ head(GI03$OUTDIR)
 ##CAUTION! Overwrite the id.csv file once you know for sure you are ready to do that. 
 # write.csv(GI03, "P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-03/WAV/KPRO_NOC1/id.csv", row.names = FALSE)
 
+# test <- read_csv("P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-03/WAV/KPRO_NOC1/id.csv")
+
 ```
 
 
