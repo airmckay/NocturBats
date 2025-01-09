@@ -311,6 +311,10 @@ df3 <- merge(df2, noise_sub, all = TRUE)
 
 # write.csv(df3, file = file.path(output_today, "CompleteDatasetBenedikte_wNoiseSubset_SimpleColumnsOnly.csv"))
 
+summary(df3$site)
+# CM-01 CM-02 CM-46 GI-01 GI-03 UT-01 
+#  3373   576  5050  7492  1862  1167 
+
 ```
 
 

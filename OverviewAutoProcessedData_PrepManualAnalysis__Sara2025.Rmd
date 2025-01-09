@@ -1,0 +1,113 @@
+---
+title: "OverviewAutoProcessedData_PrepManualAnalysis__Sara2025"
+output: html_document
+date: "2025-01-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Prepare workspace
+```{r}
+library(data.table)
+library(tidyverse)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(janitor)
+library(renv)
+library(stringr)
+library(beepr)
+library(randomcoloR)
+library(wesanderson)
+library(leaflegend)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(MoMaColors)
+
+getwd()
+#  "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
+
+## Setup output directory 
+output <-"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" # where you want to save your data
+
+file.name <- "OverviewProcessedBatData_Sara2025"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/OverviewProcessedBatData_Sara2025_2025-01-09"
+
+```
+
+## Read in the processed data and look for potential errors 
+```{r}
+
+# Sites for Sara
+# CM-18, CM-19, CM-28, CM-39, CM-40, CM-47
+# AutoIDs for Sara: 
+## PIPNAT, NYCNOC 
+
+inputCM18<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-18/WAV/KPRO_V1/id.csv") 
+# 29749 obs of 44 vars
+# Add a site column 
+inputCM18$site <- "CM-18"
+
+inputCM19<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-19/WAV/KPRO_V1/id.csv") 
+# 16684 obs of 44 vars
+# Add a site column 
+inputCM19$site <- "CM-19"
+
+inputCM39<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-39/WAV/KPRO_V1/id.csv") 
+# 14716 obs of 44 vars
+# Add a site column 
+inputCM39$site <- "CM-39"
+
+inputCM40<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-40/WAV/KPRO_V1/id.csv") 
+# 25388 obs of 44 vars
+# Add a site column 
+inputCM40$site <- "CM-40"
+
+# inputCM47<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-47/WAV/KPRO_V1/id.csv") 
+# #          obs of 44 vars
+# # Add a site column 
+# inputCM47$site <- "CM-47"
+
+names(inputCM01)
+names(inputCM02)
+names(inputCM46)
+
+# dim(inputCM01) + dim(inputCM02) = 31585
+temp1 <- merge(inputCM01, inputCM02, all = TRUE) 
+
+cm <- merge(temp1, inputCM46, all = TRUE)
+# 31585 + 15304
+# 46889 
+# The number of rows add up - good! 
+
+cm$detector <- "Song Meter Mini Bat 2 Li-ion"
+
+## Now combine cm and noc
+
+df <- merge(cm, noc, all = TRUE) 
+dim(df)
+# 81746    46
+
+dim(cm) + dim(noc) # this matches, good!
+
+# write.csv(df, file = file.path(output_today, "Gismarvik_Utsira_2024_raw_forBenedikte.csv"), row.names = FALSE)
+
+
+```
+
