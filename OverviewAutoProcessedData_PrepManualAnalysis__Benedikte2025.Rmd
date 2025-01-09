@@ -290,9 +290,27 @@ ggsave(path = output_today, filename = "BasicRecordingOverview_PNATonly.tiff", w
 table(df1$site, df1$autoid)
 # Randomly select 500 Noise files from each site for her to validate
 
+noise_sub <- df1 %>% 
+  filter(autoid == "Noise") %>% 
+  droplevels() %>% 
+  group_by(site) %>% slice_sample(n=500) %>% 
+  ungroup() 
+dim(noise_sub)
+# 3000 13 
+
+summary(noise_sub$site)
+# CM-01 CM-02 CM-46 GI-01 GI-03 UT-01 
+#   500   500   500   500   500   500 
+
+## Tada!
+
+## Now add these back to Benedikte main dataset 
+
+df3 <- merge(df2, noise_sub, all = TRUE)
+# The numbers of rows add up! 
+
+# write.csv(df3, file = file.path(output_today, "CompleteDatasetBenedikte_wNoiseSubset_SimpleColumnsOnly.csv"))
+
 ```
-
-
-## Now prepare Sara's dataset 
 
 
