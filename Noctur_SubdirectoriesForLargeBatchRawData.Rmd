@@ -1,0 +1,132 @@
+---
+title: "Noctur_SubdirectoriesForLargeBatchRawData"
+output: html_document
+date: "2025-01-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# README
+Make sure that there is a correct file path to reference in all Noctur WAV folders 
+
+
+### Set up work space and directories 
+```{r}
+
+library(data.table)
+library(tidyverse)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(janitor)
+library(renv)
+library(stringr)
+library(beepr)
+
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/CoastalMonitoring"
+
+## Setup output directory 
+#dir.create("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs")
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs"
+
+file.name <- "SubdirectoriesForLargeBatchRawData"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/SubdirectoriesForLargeBatchRawData_2024-12-10"
+
+```
+
+
+## 2024 sites - Utsira and Gismarvik 
+```{r}
+
+
+#### UTSIRA ####
+
+
+## Try fixing metadata in id.csv for processed acoustic data
+## Already manually made a copy of the original id.csv (id0.csv) 
+
+## In the process of me doing this the first time - I made several mistakes that had to be fixed and ammended! So UT-01 code is the messiest. Look below for better examples. 
+
+UT01 <-  read_csv("P:/Noctur/DataCollection_2024/Acoustics/Utsira/UT-01/WAV/KPRO_NOC1/id.csv")
+
+# 18209 obs of 44 vars 
+names(UT01)
+head(UT01$OUTDIR)
+#  "F:\\Mara\\UT-01\\WAV\\WAV_NOC1" "F:\\Mara\\UT-01\\WAV\\WAV_NOC1"
+
+UT01$OUTDIR <- "F:\\Mara\\UT-01\\WAV\\WAV_NOC1"
+head(UT01$OUTDIR)
+
+## Here is what the original id.csv (now id0.csv) file looked like.
+## Save this copy with its new name so it can be referenced if needed. 
+# write.csv(UT01, "P:/Noctur/DataCollection_2024/Acoustics/Utsira/UT-01/WAV/KPRO_NOC1/id0.csv", row.names = FALSE)
+
+# test <- read_csv("P:/Noctur/DataCollection_2024/Acoustics/Utsira/UT-01/WAV/KPRO_NOC1/id0.csv") # looks good! 
+
+UT01$OUTDIR <- "P:\\Noctur\\DataCollection_2024\\Acoustics\\Utsira\\UT-01\\WAV\\KPRO_NOC1"
+# head(UT01$OUTDIR)
+# P:\\Noctur\\DataCollection_2024\\Acoustics\\Utsira\\UT-01\\WAV\\KPRO_NOC1
+# Good! 
+
+
+##CAUTION! Overwrite the id.csv file once you know for sure you are ready to do that. 
+write.csv(UT01, "P:/Noctur/DataCollection_2024/Acoustics/Utsira/UT-01/WAV/KPRO_NOC1/id.csv", row.names = FALSE)
+
+test <- read_csv("P:/Noctur/DataCollection_2024/Acoustics/Utsira/UT-01/WAV/KPRO_NOC1/id.csv")
+
+# Looks good! 
+
+#### Gismarvik #### 
+
+## GI-01
+
+GI01 <-  read_csv("P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-01/WAV/KPRO_NOC1/id.csv")
+# 13623 of 44 vars
+
+head(GI01$OUTDIR)
+# "P:\\Noctur\\DataCollection_2024\\Acoustics\\Gismarvik\\GI-01\\WAV\\KPRO_NOC1" # no changes needed!
+
+
+## GI-03 
+
+GI03 <-  read_csv("P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-03/WAV/KPRO_NOC1/id.csv")
+# 3025 of 44 vars
+
+head(GI03$OUTDIR)
+# F:\\Mara\\GI-03\\WAV\\KPRO_NOC1 ## This needs to be changed
+
+## FIRST! Make a copy of the original id.csv file and call it id0.csv
+
+# write.csv(GI03, "P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-03/WAV/KPRO_NOC1/id0.csv", row.names = FALSE) 
+
+## check to see if that worked!
+#test <- read_csv("P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-03/WAV/KPRO_NOC1/id0.csv") # good! 
+
+GI03$OUTDIR <- "P:\\Noctur\\DataCollection_2024\\Acoustics\\Gismarvik\\GI-03\\WAV\\KPRO_NOC1"
+head(GI03$OUTDIR)
+# "P:\\Noctur\\DataCollection_2024\\Acoustics\\Gismarvik\\GI-03\\WAV\\KPRO_NOC1"
+
+##CAUTION! Overwrite the id.csv file once you know for sure you are ready to do that. 
+# write.csv(GI03, "P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-03/WAV/KPRO_NOC1/id.csv", row.names = FALSE)
+
+```
+
+

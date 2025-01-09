@@ -1,0 +1,298 @@
+---
+title: "OverviewAutoProcessedData_PrepManualAnalysis__Benedikte2025"
+output: html_document
+date: "2025-01-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Prepare and overview automatically classified bat acoustic data for Benedikte Øyens Masters thesis. 
+
+## Combine AutoID .csv files from all Gismarvik and Utsira sites (CM and Noctur combined)
+- Column for site and for detector type
+## Check for gaps in data - get a sense for low activity periods and equipment failures 
+
+
+
+
+## Prepare workspace
+```{r}
+library(data.table)
+library(tidyverse)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(janitor)
+library(renv)
+library(stringr)
+library(beepr)
+library(randomcoloR)
+library(wesanderson)
+library(leaflegend)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(MoMaColors)
+
+getwd()
+#  "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
+
+## Setup output directory 
+output <-"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" # where you want to save your data
+
+file.name <- "OverviewProcessedBatData_Benedikte2025"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/OverviewProcessedBatData_Benedikte2025_2025-01-09"
+
+```
+
+## Read in the processed data and look for potential errors 
+```{r}
+
+### NOCTUR DETECTORS - SM4-BATFS ### 
+
+#Utsira
+inputUT01 <- read_csv("P:/Noctur/DataCollection_2024/Acoustics/Utsira/UT-01/WAV/KPRO_NOC1/id.csv")
+# 18209 obs of 44 vars
+# Add a site column 
+inputUT01$site <- "UT-01"
+
+## Gismarvik
+inputGI01 <- read_csv("P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-01/WAV/KPRO_NOC1/id.csv")
+# 13623 obs of 44 vars
+# Add a site column 
+inputGI01$site <- "GI-01"
+
+inputGI03 <- read_csv("P:/Noctur/DataCollection_2024/Acoustics/Gismarvik/GI-03/WAV/KPRO_NOC1/id.csv")
+# 3025 obs of 44 vars 
+# Add a site column 
+inputGI03$site <- "GI-03"
+
+## check column names
+
+names(inputUT01) 
+names(inputGI01)
+names(inputGI03) 
+
+## First glance - syntax looks consistent - cool!!
+temp <- merge(inputGI01, inputGI03, all = TRUE) 
+dim(temp)
+# 16648  45
+# 13623 + 3025 = 16648 - good! 
+
+noc <- merge(temp, inputUT01, all = TRUE) 
+dim(noc)
+# 34857    45
+# 18209 + 13623 + 3025 = 34857 - good!
+
+## Now create a detector type column 
+
+noc$detector <- "SM4-BATFS"
+# 34857 46 
+
+### Coastal Monitoring Detectors - Song Meter Mini Bat 2 Li-ion ### 
+
+## Utsira 
+inputCM01<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-01/WAV/KPRO_V1/id.csv") 
+# 24365 obs of 44 vars
+# Add a site column 
+inputCM01$site <- "CM-01"
+
+inputCM02<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-02/WAV/KPRO_V1/id.csv") 
+# 7220 obs of 44 vars
+# Add a site column 
+inputCM02$site <- "CM-02"
+
+## Gismarvik
+inputCM46<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-46/WAV/KPRO_V1/id.csv") 
+# 15304 obs of 44 vars
+# Add a site column 
+inputCM46$site <- "CM-46"
+
+names(inputCM01)
+names(inputCM02)
+names(inputCM46)
+
+# dim(inputCM01) + dim(inputCM02) = 31585
+temp1 <- merge(inputCM01, inputCM02, all = TRUE) 
+
+cm <- merge(temp1, inputCM46, all = TRUE)
+# 31585 + 15304
+# 46889 
+# The number of rows add up - good! 
+
+cm$detector <- "Song Meter Mini Bat 2 Li-ion"
+
+## Now combine cm and noc
+
+df <- merge(cm, noc, all = TRUE) 
+dim(df)
+# 81746    46
+
+dim(cm) + dim(noc) # this matches, good!
+
+# write.csv(df, file = file.path(output_today, "Gismarvik_Utsira_2024_raw_forBenedikte.csv"), row.names = FALSE)
+
+
+```
+
+
+## Exploring Benedikte's raw dataset 
+```{r}
+
+## Housekeeping
+df1 <- df %>% 
+  rename(
+  filename = "OUT FILE FS",
+  autoid = "AUTO ID*",
+  DATE.12 = 'DATE-12',
+  HOUR.12 = 'HOUR-12',
+  TIME.12 = 'TIME-12') %>% 
+  mutate(autoid = factor(autoid), 
+         site = factor(site), 
+         detector = factor(detector)) %>% 
+  dplyr::select(OUTDIR, FOLDER, filename, DURATION, 
+                DATE, TIME, HOUR,
+                DATE.12, TIME.12, HOUR.12,
+                autoid, site, detector
+                )
+  
+summary(df1)
+
+#What is the percentage of noise recorded across sites?
+cm01 <- df1 %>% filter(site == "CM-01")  
+cm02 <- df1 %>% filter(site == "CM-02")  
+cm46 <- df1 %>% filter(site == "CM-46")  
+ut01 <- df1 %>% filter(site == "UT-01")  
+gi01 <- df1 %>% filter(site == "GI-01")  
+gi03 <- df1 %>% filter(site == "GI-03")  
+  
+noiserat_cm01 <- cm01 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(cm01) * 100)
+## 88% noise
+
+noiserat_cm02 <- cm02 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(cm02) * 100)
+## 98% noise
+
+noiserat_cm46 <- cm46 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(cm46) * 100)
+## 70% noise
+
+noiserat_ut01 <- ut01 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(ut01) * 100)
+## 96% noise
+
+noiserat_gi01 <- gi01 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(gi01) * 100)
+## 49% noise
+
+noiserat_gi03 <- gi03 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(gi03) * 100)
+## 55% noise
+library(MoMAColors)
+
+## Make a figure illustrating this 
+barnoise <- ggplot(df1) + 
+  geom_bar(aes(x= site, fill = autoid), position = "fill") +
+  scale_fill_manual(name = "AutoID", values = moma.colors("Warhol", n = 13)) + 
+  ylab("Proportion of recordings") + 
+  xlab("Site") +
+  theme(text = element_text(size = 25)) 
+barnoise
+
+ggsave(path = output_today, filename = "AllSites_Benedikte_Noise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+## Look at overall recording period 
+
+ggplot(df1) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "orange", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+ggsave(path = output_today, filename = "BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+# My first instinct is that most recording across all sites happened between late July and early September
+
+
+```
+
+
+## Remove noise and take another look 
+
+```{r}
+levels(df1$autoid)
+summary(df1$autoid)
+# 65226     noise files that we will remove. 
+
+df2 <- df1 %>% dplyr::filter(autoid != "Noise") %>% droplevels()
+# 16520 obs of 13 vars 
+# 81746 - 65226 = 16520 - good! 
+
+## Simple dataset for easily making exploratory figures 
+#write.csv(df2, file = file.path(output_today, "BenedikteData_AutoId_NoNoise_SimpleColumns.csv"))
+
+## Now take a look on what the recording activity looks like 
+ggplot(df2) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "turquoise", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - Noise files removed") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+ggsave(path = output_today, filename = "BasicRecordingOverview_noNoise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+
+## And just because I am curious 
+ggplot(df2 %>% filter(autoid == "PIPNAT") %>% droplevels()) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "coral", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - auotid Nathusius Pip") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+ggsave(path = output_today, filename = "BasicRecordingOverview_PNATonly.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+### Now add a subset of random noise files from reach site for Benedikte to also check 
+
+table(df1$site, df1$autoid)
+# Randomly select 500 Noise files from each site for her to validate
+
+```
+
+
+## Now prepare Sara's dataset 
+
+
