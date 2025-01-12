@@ -142,7 +142,7 @@ dim(df)
 # 81746    46
 
 dim(cm) + dim(noc) # this matches, good!
-
+# 46889 obs of 46 vars
 # write.csv(df, file = file.path(output_today, "Gismarvik_Utsira_2024_raw_forBenedikte.csv"), row.names = FALSE)
 
 
@@ -219,7 +219,7 @@ barnoise <- ggplot(df1) +
   theme(text = element_text(size = 25)) 
 barnoise
 
-ggsave(path = output_today, filename = "AllSites_Benedikte_Noise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+#ggsave(path = output_today, filename = "AllSites_Benedikte_Noise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
 ## Look at overall recording period 
 
@@ -234,7 +234,7 @@ ggplot(df1) +
         text = element_text(size = 25),
         axis.line = element_line(colour = "black"))
 
-ggsave(path = output_today, filename = "BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+#ggsave(path = output_today, filename = "BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
 # My first instinct is that most recording across all sites happened between late July and early September
 
@@ -268,7 +268,7 @@ ggplot(df2) +
         text = element_text(size = 25),
         axis.line = element_line(colour = "black"))
 
-ggsave(path = output_today, filename = "BasicRecordingOverview_noNoise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+#ggsave(path = output_today, filename = "BasicRecordingOverview_noNoise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
 
 ## And just because I am curious 
@@ -283,7 +283,7 @@ ggplot(df2 %>% filter(autoid == "PIPNAT") %>% droplevels()) +
         text = element_text(size = 25),
         axis.line = element_line(colour = "black"))
 
-ggsave(path = output_today, filename = "BasicRecordingOverview_PNATonly.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+#ggsave(path = output_today, filename = "BasicRecordingOverview_PNATonly.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
 ### Now add a subset of random noise files from reach site for Benedikte to also check 
 
@@ -316,5 +316,4 @@ summary(df3$site)
 #  3373   576  5050  7492  1862  1167 
 
 ```
-
 

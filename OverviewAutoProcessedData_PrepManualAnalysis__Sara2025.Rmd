@@ -27,7 +27,7 @@ library(osmdata)
 library(MetBrewer)
 library(colorBlindness)
 library(colorblindcheck)
-library(MoMaColors)
+library(MoMAColors)
 
 getwd()
 #  "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
@@ -47,6 +47,7 @@ output_today
 
 dir.create(output_today)
 output_today
+# For example: 
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/OverviewProcessedBatData_Sara2025_2025-01-09"
 
 ```
@@ -59,22 +60,22 @@ output_today
 # AutoIDs for Sara: 
 ## PIPNAT, NYCNOC 
 
-inputCM18<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-18/WAV/KPRO_V1/id.csv") 
+inputCM18 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-18/WAV/KPRO_V1/id.csv") 
 # 29749 obs of 44 vars
 # Add a site column 
 inputCM18$site <- "CM-18"
 
-inputCM19<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-19/WAV/KPRO_V1/id.csv") 
+inputCM19 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-19/WAV/KPRO_V1/id.csv") 
 # 16684 obs of 44 vars
 # Add a site column 
 inputCM19$site <- "CM-19"
 
-inputCM39<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-39/WAV/KPRO_V1/id.csv") 
+inputCM39 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-39/WAV/KPRO_V1/id.csv") 
 # 14716 obs of 44 vars
 # Add a site column 
 inputCM39$site <- "CM-39"
 
-inputCM40<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-40/WAV/KPRO_V1/id.csv") 
+inputCM40 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-40/WAV/KPRO_V1/id.csv") 
 # 25388 obs of 44 vars
 # Add a site column 
 inputCM40$site <- "CM-40"
@@ -83,6 +84,36 @@ inputCM40$site <- "CM-40"
 # #          obs of 44 vars
 # # Add a site column 
 # inputCM47$site <- "CM-47"
+
+
+## These are sites that Maris plans to manually analyze 
+
+## but we we should still take a look at them and see what files are there
+
+# CM-20
+
+inputCM20 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-20/WAV/KPRO_V1/id.csv") 
+# 19711obs of 44 vars
+# Add a site column 
+inputCM20$site <- "CM-20"
+
+# CM-22
+inputCM22 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-22/WAV/KPRO_V1/id.csv") 
+# 44375 obs of 44 vars
+# Add a site column 
+inputCM22$site <- "CM-22"
+
+# CM-28
+inputCM28 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-28/WAV/KPRO_V1/id.csv") 
+# 54918 obs of 44 vars
+# Add a site column 
+inputCM28$site <- "CM-28"
+
+# CM-49 
+inputCM49 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-49/WAV/KPRO_V1/id.csv") 
+# 22690 obs of 44 vars
+# Add a site column 
+inputCM49$site <- "CM-49"
 # 
 # names(inputCM01)
 # names(inputCM02)
