@@ -1,0 +1,158 @@
+---
+title: "PrepForManualID_Benedikte2025"
+output: html_document
+date: "2025-01-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Prepare workspace
+```{r}
+library(data.table)
+library(tidyverse)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(janitor)
+library(renv)
+library(stringr)
+library(beepr)
+library(randomcoloR)
+library(wesanderson)
+library(leaflegend)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(MoMaColors)
+
+getwd()
+#  "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
+
+## Setup output directory 
+output <-"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" # where you want to save your data
+
+file.name <- "PrepForManualID_Benedikte2025"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/PrepForManualID_Benedikte2025_2025-01-12"
+
+```
+
+
+```{r}
+
+df <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/OverviewProcessedBatData_Benedikte2025_2025-01-09/CompleteDatasetBenedikte_wNoiseSubset_SimpleColumnsOnly.csv", col_types= cols("...1" = col_skip())) 
+names(df) 
+
+## Now recreate a filepath from the file path information 
+head(df$OUTDIR)
+
+df1 <- df %>% mutate(
+  filepath = 
+    case_when(autoid == "Noise" ~ 
+                as.character(paste0(df$OUTDIR, "\\", 
+                              df$FOLDER, "\\NOISE\\", 
+                              df$filename)),
+                autoid != "Noise" ~ 
+                as.character(paste0(df$OUTDIR, "\\", 
+                              df$FOLDER, "\\", 
+                              df$filename)) )) 
+                     
+head(df1$filepath)
+
+## Now we need to copy these files and back up the data for Benedikte's analysis 
+## First just do a test batch of 15 files and see if it works (It worked - It tested it then deleted the files)
+
+# Benedikte Directory 
+# "P:/SW_CoastalMonitoring/Data_process_auto_2024/MSc_Theses/Benedikte/WAV"
+
+df1$site = factor(df1$site) 
+
+table(df1$site)
+# CM-01 CM-02 CM-46 GI-01 GI-03 UT-01 
+#  3373   576  5050  7492  1862  1167 
+
+## CM-01 3373
+cm01 <- df1 %>% filter(site == "CM-01") %>% droplevels()
+cm01_files <- as.list(cm01$filepath) 
+cm01_files_list <- unlist(cm01_files)
+
+file.copy(from = cm01_files_list,
+            to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/CM-01")
+  beep()
+
+## !! Not all of these copied over and I need to:
+# (1) figure out why
+# (2) identify the missing files
+# (3) copy those to this folder
+  
+# 2871 out of 3373 files were successfully copied
+# 3373-2871 = 502
+# I already suspect that this is related to the Noise files... 
+  
+## It is because Noise files have an additional "Noise" folder... 
+  
+  ## deleted the 2871 files and tried again with a new approach. 
+
+# ## CM-02 576
+# cm02 <- df %>% filter(site == "CM-02") %>% droplevels()
+# cm02_files <- as.list(cm02$filepath) 
+# cm02_files_list <- unlist(cm02_files)
+# 
+# file.copy(from = cm02_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/CM-02")
+#   beep()
+
+
+  
+## CM-46 5050
+# cm46 <- df %>% filter(site == "CM-46") %>% droplevels()
+# cm46_files <- as.list(cm46$filepath) 
+# cm46_files_list <- unlist(cm46_files)
+# 
+# file.copy(from = cm46_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/CM-46")
+#   beep()
+
+## GI-01
+# gi01 <- df %>% filter(site == "GI-01") %>% droplevels()
+# gi01_files <- as.list(gi01$filepath) 
+# gi01_files_list <- unlist(gi01_files)
+# 
+# file.copy(from = gi01_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/GI-01")
+#   beep()
+
+## GI-03
+# gi03 <- df %>% filter(site == "GI-03") %>% droplevels()
+# gi03_files <- as.list(gi03$filepath) 
+# gi03_files_list <- unlist(gi03_files)
+# 
+# file.copy(from = gi03_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/GI-03")
+#   beep()
+
+# ## UT-01
+# ut01 <- df %>% filter(site == "UT-01") %>% droplevels()
+# ut01_files <- as.list(ut01$filepath) 
+# ut01_files_list <- unlist(ut01_files)
+# 
+# file.copy(from = gi01_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/UT-01")
+#   beep()
+#   
+```
