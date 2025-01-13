@@ -89,6 +89,12 @@ inputCM19 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-19/WAV/KP
 # Add a site column 
 inputCM19$site <- "CM-19"
 
+# CM-26
+inputCM26 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-26/WAV/KPRO_V1/id.csv") 
+# 33595 obs of 44 vars
+# Add a site column 
+inputCM26$site <- "CM-26"
+
 inputCM39 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-39/WAV/KPRO_V1/id.csv") 
 # 14716 obs of 44 vars
 # Add a site column 
@@ -98,11 +104,6 @@ inputCM40 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-40/WAV/KP
 # 25388 obs of 44 vars
 # Add a site column 
 inputCM40$site <- "CM-40"
-
-inputCM47<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-47/WAV/KPRO_V1/id.csv")
-# 37933         obs of 44 vars
-# Add a site column
-inputCM47$site <- "CM-47"
 
 
 ## These are sites that Maris plans to manually analyze 
@@ -139,12 +140,17 @@ inputCM49$site <- "CM-49"
 ## Manually checked - looks good! 
 
 cm <- bind_rows(inputCM18, inputCM19, inputCM20,
-                inputCM22, inputCM28, inputCM39, 
-                inputCM40, inputCM47, inputCM49)  
+                inputCM22, inputCM26, inputCM28, 
+                inputCM39, inputCM40, inputCM49)  
+
+29749 + 16684 + 19711 + 
+44375 + 33595 + 54918 + 
+14716 + 25388  + 22690 
+
 dim(cm)
-# 266164 of 45 vars
+# 261826      of 45 vars
 summary(cm) # No weird/obvious NAs 
-#write.csv(cm, file = file.path(output_today, "AllSaraSites_MetaData.csv")) 
+#write.csv(cm, file = file.path(output_today, "AllSaraSites_MetaData_wCM26.csv")) 
 # 13.01.2025
 
 ```
@@ -178,26 +184,26 @@ barnoise <- ggplot(cm1) +
   theme(text = element_text(size = 25)) 
 barnoise
 
-# ggsave(path = output_today, filename = "AllSites_Sara_Noise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+# ggsave(path = output_today, filename = "AllSites_Sara_Noise_wCM26.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
 #Very quick and dirty overview 
 
 easytable <- table(cm1$site, cm1$autoid)
 
-# write.csv(easytable, file = file.path(output_today, "EasySiteAutoIDOverview.csv"))
+# write.csv(easytable, file = file.path(output_today, "EasySiteAutoIDOverview_wCM26.csv"))
 # 
 ```
 
-"easytable" looks like this: 
+
         BARBAR EPTNIL MYOBRA MYODAU MYOMYS MYONAT NYCNOC  NoID Noise
   CM-18     11   1356      0      2      0      0     14   147 27882
   CM-19     98   5682      0      0      0      0     13   545  9733
   CM-20     85  11010      0      0      0      0     50   414  7719
   CM-22    273  15143      0     15      1     15    512  2920 22832
+  CM-26     56  22706      0      9      0      3    193  2068  7519
   CM-28     99  10924      0      1      0      0    177  1079 38532
   CM-39     47   1874      0      0      1      0      0   247 12531
   CM-40     33   7196     81     39    283      7     22  1026 16641
-  CM-47     10   2718      0      0      0      2      5   103 34729
   CM-49    103   5785      0      3      0      4    159   961 14489
        
         PIPNAT PIPPYG PLEAUR VESMUR
@@ -205,11 +211,12 @@ easytable <- table(cm1$site, cm1$autoid)
   CM-19    463    140      3      7
   CM-20     54    211    158     10
   CM-22    353   1379      8    924
+  CM-26    210    549     13    269
   CM-28   1181   2676     19    230
   CM-39     10      2      0      4
   CM-40     23      5      2     30
-  CM-47      1    361      2      2
   CM-49    132    817     22    215
+
 
 ## Look at spatial temporal coverage 
 
@@ -227,35 +234,77 @@ ggplot(cm1) +
         text = element_text(size = 25),
         axis.line = element_line(colour = "black"))
 
-ggsave(path = output_today, filename = "BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+ggsave(path = output_today, filename = "BasicRecordingOverview_wCM26.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+
+## Good coverage! 
+
+## Need to drop the weird early recording for CM-22 and the late recording for CM-39!
 
 ```
 
 
-## New plan 
-Drop CM-47 and sub for CM-26 because there have been too many equipment failures at the end of the season for CM-47
 
 ```{r}
-inputCM26 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-26/WAV/KPRO_V1/id.csv") 
-# 33595 obs of 44 vars
-# Add a site column 
-inputCM26$site <- "CM-26"
+## Remove noise and take another look 
 
-ggplot(inputCM26) + 
-  geom_point(aes(x = DATE, y = site), 
-             color = "orange", alpha = 0.5, size = 3) +
+levels(cm1$autoid)
+summary(cm1$autoid)
+# 157878 noise files that we will remove. 
+
+cm2 <- cm1 %>% dplyr::filter(autoid != "Noise") %>% droplevels()
+# 103948 obs of 12 vars 
+# 261826 - 157878 = 103948- good!
+
+## Simple dataset for easily making exploratory figures 
+#write.csv(cm2, file = file.path(output_today, "SaraData_AutoId_NoNoise_SimpleColumns.csv"))
+
+## Now take a look on what the recording activity looks like 
+ggplot(cm2) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "turquoise", alpha = 0.5, size = 3) +
     xlab("Date in season") + ylab(" ") +
-  ggtitle("Recording activity") + 
+  ggtitle("Recording activity - Noise files removed") + 
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         text = element_text(size = 25),
         axis.line = element_line(colour = "black"))
-# decent coverage! 
 
-test <- inputCM26 %>% mutate(autoid = factor(`AUTO ID*`))
-table(test$autoid)
+# ggsave(path = output_today, filename = "BasicRecordingOverview_noNoise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
-## This is a better fit than CM-47 for sure... 
+
+## And just because I am curious 
+ggplot(cm2 %>% filter(autoid == "PIPNAT") %>% droplevels()) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "coral", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - auotid Nathusius Pip") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+# ggsave(path = output_today, filename = "BasicRecordingOverview_PNATonly.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+```
+
+
+## Finding a suitable subset that adds up to 20,000 files 
+```{r}
+## Need to drop the weird early recording for CM-22 and the late recording for CM-39!
+
+levels(cm2$autoid)
+
+DF <- cm2 %>% filter(
+  autoid %in% c("BARBAR", "NYCNOC", "PIPNAT",
+                "PIPPYG", "PLEAUR", "NoID")) %>% 
+    droplevels() 
+
+dim(DF)
+# 20101    12  
+# 13.01.2025
+#write.csv(DF, file = file.path(output_today, "SaraSimpleColumn_Subset.csv"))
 ```
 
