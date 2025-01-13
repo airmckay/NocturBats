@@ -8,6 +8,25 @@ date: "2025-01-09"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Sara's Masters thesis data prep and innitial overview
+
+Target sites that only Sara is looking at so far: 
+CM-18, CM-19, CM-28, CM-39, CM-40, CM-47 
+
+Target sites that Maris is going to analyze: 
+CM-20, CM-22, CM-28, CM-49 
+
+Target autoids - top priority: 
+BARBAR, NYCNOC, PIPNAT 
+
+Potential additional autoids: 
+NoID, Noise, EPTNIL... 
+
+Need to compile a dataset that Sara can feasibly analyze for her MSc: 
+approximately 20,000 files
+
+I need to look at all the data from these sites and see what subset of data is feasible for her to work with.
+
 
 ## Prepare workspace
 ```{r}

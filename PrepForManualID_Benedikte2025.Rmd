@@ -104,10 +104,14 @@ dfx <- df %>% filter(filename != "NA")
 dfx1 <- full_join(dfx, noise_sub1) 
 # 19520 observations - good!
 
-## THIS is the new dataset for Benedikte
 
 
-# write.csv(dfx1, file = file.path(output_today, "CompleteDatasetBenedikte_wNoiseSubset_SimpleColumnsOnly_TRUE.csv"))
+#########################################################################################################################
+### OBS!! ###                                                                                                         ##
+## THIS is the new dataset for Benedikte                                                                              ##      
+# write.csv(dfx1, file = file.path(output_today, "CompleteDatasetBenedikte_wNoiseSubset_SimpleColumnsOnly_TRUE.csv")) ##
+########################################################################################################################
+
 
 ## Now recreate a filepath from the file path information 
 head(df$OUTDIR)
@@ -115,13 +119,13 @@ head(df$OUTDIR)
 df1 <- dfx1 %>% mutate(
   filepath = 
     case_when(autoid == "Noise" ~ 
-                as.character(paste0(df$OUTDIR, "\\", 
-                              df$FOLDER, "\\NOISE\\", 
-                              df$filename)),
+                as.character(paste0(dfx1$OUTDIR, "\\", 
+                              dfx1$FOLDER, "\\NOISE\\", 
+                              dfx1$filename)),
                 autoid != "Noise" ~ 
-                as.character(paste0(df$OUTDIR, "\\", 
-                              df$FOLDER, "\\", 
-                              df$filename)) )) 
+                as.character(paste0(dfx1$OUTDIR, "\\", 
+                              dfx1$FOLDER, "\\", 
+                              dfx1$filename)) )) 
                      
 head(df1$filepath)
 
@@ -138,6 +142,14 @@ table(df1$site)
 #  3373   576  5050  7492  1862  1167 
 ## These numbers still match up - good! 
 
+```
+
+
+## Copying files for Benedikte 
+Separate files by site to make them easier to analyze in batches and to keep the batches manageable for less powerful computers 
+
+
+```{r}
 ## CM-01 3373
 cm01 <- df1 %>% filter(site == "CM-01") %>% droplevels()
 cm01_files <- as.list(cm01$filepath) 
@@ -199,46 +211,73 @@ cm02 <- df1 %>% filter(site == "CM-02") %>% droplevels()
 cm02_files <- as.list(cm02$filepath)
 cm02_files_list <- unlist(cm02_files)
 
-file.copy(from = cm02_files_list,
-            to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/CM-02")
-  beep()
+# file.copy(from = cm02_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/CM-02")
+#   beep()
+
+## All good!! 
 
 
-  
-## CM-46 5050
-# cm46 <- df1 %>% filter(site == "CM-46") %>% droplevels()
-# cm46_files <- as.list(cm46$filepath) 
-# cm46_files_list <- unlist(cm46_files)
-# 
+# CM-46 5050
+cm46 <- df1 %>% filter(site == "CM-46") %>% droplevels()
+cm46_files <- as.list(cm46$filepath)
+cm46_files_list <- unlist(cm46_files)
+
 # file.copy(from = cm46_files_list,
 #             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/CM-46")
 #   beep()
 
-## GI-01
-# gi01 <- df1 %>% filter(site == "GI-01") %>% droplevels()
-# gi01_files <- as.list(gi01$filepath) 
-# gi01_files_list <- unlist(gi01_files)
+## Three files failed to copy: 
+# 2LU00865_20240827_002745_000.wav, 2LU00865_20240826_232909_000.wav, 2LU00865_20240805_013317_000.wav 
+# Find out more about them... 
+
+whatsthis <- df1 %>% filter(filename %in% c("2LU00865_20240827_002745_000.wav", 
+                                            "2LU00865_20240826_232909_000.wav", 
+                                            "2LU00865_20240805_013317_000.wav" )) 
+
+## These alll ended up in the Noise folder as well.. annoying.. 
+whatsthis$filepath <- as.character(paste0(whatsthis$OUTDIR, "\\", 
+                              whatsthis$FOLDER, "\\NOISE\\", 
+                              whatsthis$filename)) 
+
+whatsthis$filepath
+cm46_pt2_files <- as.list(whatsthis$filepath) 
+cm46_pt2_files_list <- unlist(cm46_pt2_files)
+
+# file.copy(from = cm46_pt2_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/CM-46")
+
+## All good now
+
+## GI-01 7492
+gi01 <- df1 %>% filter(site == "GI-01") %>% droplevels()
+gi01_files <- as.list(gi01$filepath)
+gi01_files_list <- unlist(gi01_files)
 # 
 # file.copy(from = gi01_files_list,
 #             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/GI-01")
 #   beep()
+## No problems 
 
-## GI-03
-# gi03 <- df1 %>% filter(site == "GI-03") %>% droplevels()
-# gi03_files <- as.list(gi03$filepath) 
-# gi03_files_list <- unlist(gi03_files)
-# 
+
+# GI-03 1862
+gi03 <- df1 %>% filter(site == "GI-03") %>% droplevels()
+gi03_files <- as.list(gi03$filepath)
+gi03_files_list <- unlist(gi03_files)
+
 # file.copy(from = gi03_files_list,
 #             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/GI-03")
 #   beep()
 
-# ## UT-01
-# ut01 <- df1 %>% filter(site == "UT-01") %>% droplevels()
-# ut01_files <- as.list(ut01$filepath) 
-# ut01_files_list <- unlist(ut01_files)
-# 
-# file.copy(from = gi01_files_list,
+## UT-01 1167
+ut01 <- df1 %>% filter(site == "UT-01") %>% droplevels()
+ut01_files <- as.list(ut01$filepath)
+ut01_files_list <- unlist(ut01_files)
+
+# file.copy(from = ut01_files_list,
 #             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/UT-01")
 #   beep()
-#   
+# #   
+
 ```
+
