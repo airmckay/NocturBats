@@ -142,6 +142,28 @@ table(df1$site)
 #  3373   576  5050  7492  1862  1167 
 ## These numbers still match up - good! 
 
+### ! ### OBS ### ! ###
+## There was an issue with UT-01 where an SD card was not formatted before being deployed 
+## need to remove observations from S4U09774 
+
+dfy <- df1 %>% 
+  mutate(
+    problem = factor(case_when(
+  str_detect(filename, "S4U09774") ~ "Delete", 
+  TRUE ~ "No probelm"
+))) 
+summary(dfy)
+# 21 files that need to be removed/deleted. 
+
+## Use this dataobject for copy UT-01 files and for getting metadata later... 
+dfz <- dfy %>% filter(problem != "Delete") %>% select(-problem)
+#19499 obs 
+# 19520-21
+# good! 
+
+table(dfz$site)
+# CM-01 CM-02 CM-46 GI-01 GI-03 UT-01 
+#  3373   576  5050  7492  1862  1146
 ```
 
 
@@ -265,19 +287,41 @@ gi03 <- df1 %>% filter(site == "GI-03") %>% droplevels()
 gi03_files <- as.list(gi03$filepath)
 gi03_files_list <- unlist(gi03_files)
 
+
+
 # file.copy(from = gi03_files_list,
 #             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/GI-03")
 #   beep()
 
-## UT-01 1167
-ut01 <- df1 %>% filter(site == "UT-01") %>% droplevels()
+## UT-01 1146
+ut01 <- dfz %>% filter(site == "UT-01") %>% droplevels()
 ut01_files <- as.list(ut01$filepath)
 ut01_files_list <- unlist(ut01_files)
 
 # file.copy(from = ut01_files_list,
 #             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/UT-01")
 #   beep()
-# #   
+# 
+
+## copy over metadata as well 
+meta <- dfz %>% dplyr::select(filename, site, detector) 
+ref$filename <- ref$`OUT FILE FS`
+meta1 <- left_join(dfz, ref)
+
+# write.csv(meta1, "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/WAV/MetaDataAllFillesForBenedikte.csv")
+# write.csv(meta1, file = file.path(output_today, "MetaDataAllFillesForBenedikte.csv"))
+# 19499 obs of 52 vars 
+# 13.01.2024
+
+## Now make the minimal column version 
+meta2 <- meta1 %>% 
+  dplyr::select(c(OUTDIR, FOLDER, filename, DURATION, 
+                DATE, TIME, HOUR,
+                DATE.12, TIME.12, HOUR.12,
+                autoid, site, detector, filepath)) 
+# write.csv(meta2, file = file.path(output_today, "MetaDataAllFillesForBenedikte_MinimalColumns.csv"))
+# 13.01.2024
+
 
 ```
 

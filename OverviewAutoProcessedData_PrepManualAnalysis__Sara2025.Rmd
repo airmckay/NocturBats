@@ -99,10 +99,10 @@ inputCM40 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-40/WAV/KP
 # Add a site column 
 inputCM40$site <- "CM-40"
 
-# inputCM47<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-47/WAV/KPRO_V1/id.csv") 
-# #          obs of 44 vars
-# # Add a site column 
-# inputCM47$site <- "CM-47"
+inputCM47<- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-47/WAV/KPRO_V1/id.csv")
+# 37933         obs of 44 vars
+# Add a site column
+inputCM47$site <- "CM-47"
 
 
 ## These are sites that Maris plans to manually analyze 
@@ -110,9 +110,8 @@ inputCM40$site <- "CM-40"
 ## but we we should still take a look at them and see what files are there
 
 # CM-20
-
 inputCM20 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-20/WAV/KPRO_V1/id.csv") 
-# 19711obs of 44 vars
+# 19711 obs of 44 vars
 # Add a site column 
 inputCM20$site <- "CM-20"
 
@@ -133,31 +132,130 @@ inputCM49 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-49/WAV/KP
 # 22690 obs of 44 vars
 # Add a site column 
 inputCM49$site <- "CM-49"
+
+## QUALITY CONTROL CHECK 
+
+# Does every input file for each site correspond to only ONE detector? check serial number in the file names
+## Manually checked - looks good! 
+
+cm <- bind_rows(inputCM18, inputCM19, inputCM20,
+                inputCM22, inputCM28, inputCM39, 
+                inputCM40, inputCM47, inputCM49)  
+dim(cm)
+# 266164 of 45 vars
+summary(cm) # No weird/obvious NAs 
+#write.csv(cm, file = file.path(output_today, "AllSaraSites_MetaData.csv")) 
+# 13.01.2025
+
+```
+
+## Get an overview
+```{r}
+
+## Housekeeping
+cm1 <- cm %>% 
+  rename(
+  filename = "OUT FILE FS",
+  autoid = "AUTO ID*",
+  DATE.12 = 'DATE-12',
+  HOUR.12 = 'HOUR-12',
+  TIME.12 = 'TIME-12') %>% 
+  mutate(autoid = factor(autoid), 
+         site = factor(site)) %>% 
+  dplyr::select(OUTDIR, FOLDER, filename, DURATION, 
+                DATE, TIME, HOUR,
+                DATE.12, TIME.12, HOUR.12,
+                autoid, site
+                )
+# Get a sense for how much noise there is across these sites 
+
+## Make a figure illustrating this 
+barnoise <- ggplot(cm1) + 
+  geom_bar(aes(x= site, fill = autoid), position = "fill") +
+  scale_fill_manual(name = "AutoID", values = moma.colors("Warhol", n = 13)) + 
+  ylab("Proportion of recordings") + 
+  xlab("Site") +
+  theme(text = element_text(size = 25)) 
+barnoise
+
+# ggsave(path = output_today, filename = "AllSites_Sara_Noise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+#Very quick and dirty overview 
+
+easytable <- table(cm1$site, cm1$autoid)
+
+# write.csv(easytable, file = file.path(output_today, "EasySiteAutoIDOverview.csv"))
 # 
-# names(inputCM01)
-# names(inputCM02)
-# names(inputCM46)
-# 
-# # dim(inputCM01) + dim(inputCM02) = 31585
-# temp1 <- merge(inputCM01, inputCM02, all = TRUE) 
-# 
-# cm <- merge(temp1, inputCM46, all = TRUE)
-# # 31585 + 15304
-# # 46889 
-# # The number of rows add up - good! 
-# 
-# cm$detector <- "Song Meter Mini Bat 2 Li-ion"
-# 
-# ## Now combine cm and noc
-# 
-# df <- merge(cm, noc, all = TRUE) 
-# dim(df)
-# # 81746    46
-# 
-# dim(cm) + dim(noc) # this matches, good!
-# 
-# # write.csv(df, file = file.path(output_today, "Gismarvik_Utsira_2024_raw_forBenedikte.csv"), row.names = FALSE)
+```
+
+"easytable" looks like this: 
+        BARBAR EPTNIL MYOBRA MYODAU MYOMYS MYONAT NYCNOC  NoID Noise
+  CM-18     11   1356      0      2      0      0     14   147 27882
+  CM-19     98   5682      0      0      0      0     13   545  9733
+  CM-20     85  11010      0      0      0      0     50   414  7719
+  CM-22    273  15143      0     15      1     15    512  2920 22832
+  CM-28     99  10924      0      1      0      0    177  1079 38532
+  CM-39     47   1874      0      0      1      0      0   247 12531
+  CM-40     33   7196     81     39    283      7     22  1026 16641
+  CM-47     10   2718      0      0      0      2      5   103 34729
+  CM-49    103   5785      0      3      0      4    159   961 14489
+       
+        PIPNAT PIPPYG PLEAUR VESMUR
+  CM-18     93    221      5     18
+  CM-19    463    140      3      7
+  CM-20     54    211    158     10
+  CM-22    353   1379      8    924
+  CM-28   1181   2676     19    230
+  CM-39     10      2      0      4
+  CM-40     23      5      2     30
+  CM-47      1    361      2      2
+  CM-49    132    817     22    215
+
+## Look at spatial temporal coverage 
+
+```{r}
+## Look at overall recording period 
+
+ggplot(cm1) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "orange", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+ggsave(path = output_today, filename = "BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+```
 
 
+## New plan 
+Drop CM-47 and sub for CM-26 because there have been too many equipment failures at the end of the season for CM-47
+
+```{r}
+inputCM26 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-26/WAV/KPRO_V1/id.csv") 
+# 33595 obs of 44 vars
+# Add a site column 
+inputCM26$site <- "CM-26"
+
+ggplot(inputCM26) + 
+  geom_point(aes(x = DATE, y = site), 
+             color = "orange", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+# decent coverage! 
+
+test <- inputCM26 %>% mutate(autoid = factor(`AUTO ID*`))
+table(test$autoid)
+
+## This is a better fit than CM-47 for sure... 
 ```
 
