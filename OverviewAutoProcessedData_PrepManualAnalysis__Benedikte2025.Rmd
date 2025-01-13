@@ -307,6 +307,7 @@ summary(noise_sub$site)
 ## Now add these back to Benedikte main dataset 
 
 df3 <- merge(df2, noise_sub, all = TRUE)
+
 # The numbers of rows add up! 
 
 # write.csv(df3, file = file.path(output_today, "CompleteDatasetBenedikte_wNoiseSubset_SimpleColumnsOnly.csv"))
