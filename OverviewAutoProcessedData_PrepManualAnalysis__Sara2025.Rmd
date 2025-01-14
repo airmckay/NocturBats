@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Sara's Masters thesis data prep and innitial overview
 
 Target sites that only Sara is looking at so far: 
-CM-18, CM-19, CM-28, CM-39, CM-40, CM-47 
+CM-18, CM-19, CM-26, CM-28, CM-39, CM-40
 
 Target sites that Maris is going to analyze: 
 CM-20, CM-22, CM-28, CM-49 

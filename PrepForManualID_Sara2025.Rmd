@@ -1,0 +1,345 @@
+---
+title: "PrepForManualID_Sara2025"
+output: html_document
+date: "2025-01-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Prepare workspace
+```{r}
+library(data.table)
+library(tidyverse)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(janitor)
+library(renv)
+library(stringr)
+library(beepr)
+library(randomcoloR)
+library(wesanderson)
+library(leaflegend)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(MoMAColors)
+
+getwd()
+#  "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
+
+## Setup output directory 
+output <-"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" # where you want to save your data
+
+file.name <- "PrepForManualID_Sara2025"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/PrepForManualID_Sara2025_2025-01-14"
+
+```
+
+
+#Import the data and do some housekeeping 
+```{r}
+
+df <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/OverviewProcessedBatData_Sara2025_2025-01-13/SaraSimpleColumn_Subset.csv", col_types= cols("...1" = col_skip()))
+# 20101 obs of 12 vars
+
+df1 <- df %>% mutate(
+  site = factor(site), 
+  autoid = factor(autoid), 
+  filepath = 
+    case_when(autoid == "Noise" ~ 
+                as.character(paste0(df$OUTDIR, "\\", 
+                              df$FOLDER, "\\NOISE\\", 
+                              df$filename)),
+                autoid != "Noise" ~ 
+                as.character(paste0(df$OUTDIR, "\\", 
+                              df$FOLDER, "\\", 
+                              df$filename)) )) ## There is no Noise in this dataset so this is a bit silly to include, but so be it. 
+
+summary(df1$autoid)
+# BARBAR NYCNOC   NoID PIPNAT PIPPYG PLEAUR 
+#    805   1140   9407   2519   6000    230 
+
+summary(df1$site) 
+# CM-18 CM-19 CM-20 CM-22 CM-26 CM-28 CM-39 CM-40 CM-49 
+#   491  1262   972  5445  3089  5231   306  1111  2194
+
+```
+
+
+## Start copying over files 
+Separate files by site to make them easier to analyze in batches and to keep the batches manageable for less powerful computers 
+
+```{r}
+## CM-18 - 491 files 
+cm18 <- df1 %>% filter(site == "CM-18") %>% droplevels()
+summary(cm18)
+
+cm18_files <- as.list(cm18$filepath) 
+cm18_files_list <- unlist(cm18_files)
+
+# file.copy(from = cm18_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-18")
+#   beep()
+  # all good! 
+
+## CM-19 - 1262 files 
+cm19 <- df1 %>% filter(site == "CM-19") %>% droplevels()
+summary(cm19)
+
+cm19_files <- as.list(cm19$filepath) 
+cm19_files_list <- unlist(cm19_files)
+
+# file.copy(from = cm19_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-19")
+#   beep() 
+
+
+## One file failed to be copied: 2LU00818_20241007_071334_000.wav
+# Manually search for it and check its meta data
+## It ended up in the Noise file but it is classified as PIPPYG
+whatsthis <- df1 %>% filter(filename == "2LU00818_20241007_071334_000.wav")
+
+whatsthis$filepath <- as.character(paste0(whatsthis$OUTDIR, "\\", 
+                              whatsthis$FOLDER, "\\NOISE\\", 
+                              whatsthis$filename)) 
+
+whatsthis$filepath
+cm19_pt2_files <- as.list(whatsthis$filepath) 
+cm19_pt2_files_list <- unlist(cm19_pt2_files)
+
+# file.copy(from = cm19_pt2_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-19")
+
+## All good now
+
+
+## CM-20 - 972 files 
+cm20 <- df1 %>% filter(site == "CM-20") %>% droplevels()
+summary(cm20)
+
+cm20_files <- as.list(cm20$filepath) 
+cm20_files_list <- unlist(cm20_files)
+
+# file.copy(from = cm20_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-20")
+#   beep()
+## All good 
+
+
+## CM-22 - 5445 files 
+cm22 <- df1 %>% filter(site == "CM-22") %>% droplevels()
+summary(cm20)
+
+cm22_files <- as.list(cm22$filepath) 
+cm22_files_list <- unlist(cm22_files)
+
+file.copy(from = cm22_files_list,
+            to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-22")
+  beep()
+#   
+  
+## Four files failed to copy - most likely the same problem, so lets try the standard approach of pulling them from the noise folder 
+whatsthis <- df1 %>% filter(filename %in% c("2LU00709_20240826_235636_000.wav", 
+                                            "2LU00709_20240831_223340_000.wav", 
+                                            "2LU00709_20240904_231548_000.wav",
+                                            "2LU00709_20240906_220852_000.wav")) 
+
+## These alll ended up in the Noise folder as well.. annoying.. 
+whatsthis$filepath <- as.character(paste0(whatsthis$OUTDIR, "\\", 
+                              whatsthis$FOLDER, "\\NOISE\\", 
+                              whatsthis$filename)) 
+
+whatsthis$filepath
+cm22_pt2_files <- as.list(whatsthis$filepath) 
+cm22_pt2_files_list <- unlist(cm22_pt2_files)
+
+file.copy(from = cm22_pt2_files_list,
+            to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-22")
+## All good
+
+
+## CM-26 - 3089 files 
+cm26 <- df1 %>% filter(site == "CM-26") %>% droplevels()
+summary(cm26)
+
+cm26_files <- as.list(cm26$filepath) 
+cm26_files_list <- unlist(cm26_files)
+
+# file.copy(from = cm26_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-26")
+#   beep()
+
+
+## One file failed to copy: 2LU00860_20240722_035407_000 - It was probably in the Noise folder so I will just try to change the filepath manually to fix that... 
+
+# file.copy(from = "P:/SW_CoastalMonitoring/Data_collection_2024/CM-26/WAV/KPRO_V1/23.07.2024_CM-26/Data/NOISE/2LU00860_20240722_035407_000.wav",
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-26")
+#   beep()
+# That worked! 
+  
+  
+## CM-28 - 5231 files 
+cm28 <- df1 %>% filter(site == "CM-28") %>% droplevels()
+summary(cm28)
+
+cm28_files <- as.list(cm28$filepath) 
+cm28_files_list <- unlist(cm28_files)
+
+# file.copy(from = cm28_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-28")
+#   beep()
+  
+## One file failed to copy: 2LU00830_20240722_234851_000 - It was probably in the Noise folder so I will just try to change the filepath manually to fix that... 
+
+# file.copy(from = "P:/SW_CoastalMonitoring/Data_collection_2024/CM-28/WAV/KPRO_V1/16.08.2024_CM-28/Data/NOISE/2LU00830_20240722_234851_000.wav",
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-28")
+#   beep()
+# That worked! 
+  
+  ## There are 341 files in the output folder now ... I will try to subset the difference between the files uploaded and the files expected to upload to try and copy over the last files... 
+  
+done28 <- as.data.frame(list.files("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-28")) 
+
+done28$filename <- done28[,1]
+done28 <- done28 %>% 
+  select(-1) %>% 
+  mutate(filepath = as.character(paste0("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-28/", done28$filename))) 
+
+done28list <- done28$filename
+undone28 <- cm28 %>% dplyr::filter(!filename %in% done28list) 
+# 5231-341 = 4890 - matches, good! 
+
+cm28_pt2_files <- as.list(undone28$filepath) 
+cm28_pt2_files_list <- unlist(cm28_pt2_files)
+
+# file.copy(from = cm28_pt2_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-28")
+#   beep()
+  
+  ## There were four final files that failed to copy - most likely because they were also in the noise folder. SO HERE WE GO! one last round hopefully: 
+  
+whatsthis <- df1 %>% filter(filename %in% c("2LU00830_20241015_154658_000.wav", 
+                                            "2LU00830_20240920_002326_000.wav", 
+                                            "2LU00830_20240919_211243_000.wav",
+                                            "2LU00830_20240919_221032_000.wav")) 
+
+whatsthis$filepath <- as.character(paste0(whatsthis$OUTDIR, "\\", 
+                              whatsthis$FOLDER, "\\NOISE\\", 
+                              whatsthis$filename))
+
+whatsthis$filepath
+cm28_pt3_files <- as.list(whatsthis$filepath) 
+cm28_pt3_files_list <- unlist(cm28_pt3_files)
+
+# file.copy(from = cm28_pt3_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-28")
+# ## All good
+
+
+## CM-39 - 306 files 
+cm39 <- df1 %>% filter(site == "CM-39") %>% droplevels()
+summary(cm39)
+
+cm39_files <- as.list(cm39$filepath) 
+cm39_files_list <- unlist(cm39_files)
+
+# file.copy(from = cm39_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-39")
+#   beep()
+# All good
+
+  
+  ## One file failed to copy - probably in the NOISE folder... 
+
+  # file.copy(from = "P:/SW_CoastalMonitoring/Data_collection_2024/CM-39/WAV/KPRO_V1/17.10.2024_CM-39/Data/NOISE/2LU00842_20240910_203953_000.wav",
+  #           to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-39")
+  # # beep()
+# That worked! 
+
+
+## CM-40 - 1111 files 
+cm40 <- df1 %>% filter(site == "CM-40") %>% droplevels()
+summary(cm40)
+
+cm40_files <- as.list(cm40$filepath) 
+cm40_files_list <- unlist(cm40_files)
+
+# file.copy(from = cm40_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-40")
+#   beep()
+# # 
+  
+    ## There were two final files that failed to copy - most likely because they were also in the noise folder. SO HERE WE GO! one last round hopefully: 
+  
+whatsthis <- df1 %>% filter(filename %in% c("2LU00879_20240916_040640_000.wav", 
+                                            "2LU00879_20240922_211711_000.wav")) 
+
+whatsthis$filepath <- as.character(paste0(whatsthis$OUTDIR, "\\", 
+                              whatsthis$FOLDER, "\\NOISE\\", 
+                              whatsthis$filename))
+
+whatsthis$filepath
+cm40_pt2_files <- as.list(whatsthis$filepath) 
+cm40_pt2_files_list <- unlist(cm40_pt2_files)
+
+# file.copy(from = cm40_pt2_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-40")
+#   beep()
+  
+## all done!
+  
+
+## CM-49 - 2194 files 
+cm49 <- df1 %>% filter(site == "CM-49") %>% droplevels()
+summary(cm40)
+
+cm49_files <- as.list(cm49$filepath) 
+cm49_files_list <- unlist(cm49_files)
+
+# file.copy(from = cm49_files_list,
+#             to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-49")
+#   beep()
+# # 
+
+
+    ## There were four final files that failed to copy - most likely because they were also in the noise folder. SO HERE WE GO! one last round hopefully: 
+  
+whatsthis <- df1 %>% filter(filename %in% c("2LU00829_20240725_044912_000.wav",
+                                            "2LU00829_20240730_000305_000.wav", 
+                                            "2LU00829_20240802_174209_000.wav", 
+                                            "2LU00829_20240807_231100_000.wav")) 
+
+whatsthis$filepath <- as.character(paste0(whatsthis$OUTDIR, "\\", 
+                              whatsthis$FOLDER, "\\NOISE\\", 
+                              whatsthis$filename))
+whatsthis$filename
+whatsthis$filepath
+cm49_pt2_files <- as.list(whatsthis$filepath) 
+cm49_pt2_files_list <- unlist(cm49_pt2_files)
+
+file.copy(from = cm49_pt2_files_list,
+            to = "P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/WAV/CM-49")
+  beep()
+  
+## all done!
+  
+
+```
+
