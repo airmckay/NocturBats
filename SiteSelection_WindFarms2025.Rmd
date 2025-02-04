@@ -1,0 +1,240 @@
+---
+title: "SiteSelection_WindFarms2025"
+output: html_document
+date: "2025-02-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Import the points of all the wind turbines for 
+Høg-Jæren
+Måkaknuten
+Stigafjellet
+Egersund 
+Bjerkreim
+
+### Explore variation in elevation across all points
+
+
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(mapview)
+library(sf)
+library(sp)
+library(maps)
+library(leaflet)
+library(randomcoloR)
+library(wesanderson)
+library(leaflegend)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(ggmap)
+library(maptools)
+library(spatstat)
+library(elevatr)
+library(gdalUtils)
+library(rgdal)
+library(terra)
+
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
+
+## Setup output directory 
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs"
+
+file.name <- "SiteSelection_WindFarms2025"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/SiteSelection_WindFarms2025_2025-02-04"
+
+```
+
+
+```{r}
+
+## Note that I had to manually generate the points for Høg-Jæren so these are not named according to the actual turbine identities. 
+
+
+## The KML file has the points separated into folder for each wind farm so I need to use a function to simulatenously import all layers at once 
+allKmlLayers <- function(kmlfile){
+  lyr <- ogrListLayers(kmlfile)
+  mykml <- list()
+  for (i in 1:length(lyr)) {
+    mykml[i] <- readOGR(kmlfile,lyr[i])
+  }
+  names(mykml) <- lyr
+  return(mykml)
+}
+
+
+kmlfile <- ("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Locations/StudyDesign_NorskVind_WTs_2025.KML")
+
+tpt <- allKmlLayers(kmlfile)
+
+## This is how you import the folders one at a time: 
+
+bj <- readOGR(kmlfile,"Bjerkreim") # 70 pts
+eg <- readOGR(kmlfile,"Egersund") # 33 pts
+ma <- readOGR(kmlfile,"Maakaknuten") # 22 pts
+st <- readOGR(kmlfile,"Stigafjellet") # 7 pts 
+hj <- readOGR(kmlfile,"Hoeg-Jaeren") # 32 pts
+## Number of points correspond to what is expected 
+## Add a WindFarm column 
+
+bj$WindFarm <- "Bjerkreim"
+eg$WindFarm <- "Egersund"
+ma$WindFarm <- "Maakaknuten"
+st$WindFarm <- "Stigafjellet"
+hj$WindFarm <- "Hoeg-Jaere"
+
+## Right now the names for Egersund and Bjerkreim wind turbines are not terribly helpful so I am going to fix those
+
+bj$Name <- gsub("E", "B", bj$Name)
+bj$Name <- gsub("S", "B", bj$Name)
+bj$Name <- gsub("G", "B", bj$Name)
+
+eg$Name <- gsub("S", "E", eg$Name)
+
+crs(bj)
+crs(eg)
+crs(ma)
+crs(st)
+crs(hj)
+
+## All 4326
+
+## Now try to combine everyone 
+temp1 <- spRbind (bj, eg) # 103 pts
+temp2 <- spRbind(temp1, ma) # 125 pts 
+temp3 <- spRbind(temp2, st) # 132 pts 
+temp4 <- spRbind(temp3, hj) # 164 pts 
+# 70 + 33 + 22 + 7 + 32
+# 164 - good ! 
+
+crs(temp4)
+
+tpt <- temp4 
+tpt$WindFarm <- factor(tpt$WindFarm)
+levels(tpt$WindFarm)
+
+## Now plot it to see if it makes sense 
+plot(tpt)
+
+# Prettier plot
+test <- MetBrewer::scale_color_met_d("Java")
+
+pal <- colorFactor(
+  c("#663171","#e2998a","#cf3a36","#0c7156","#ea7428"), 
+  domain = c("Bjerkreim",    "Egersund",     "Hoeg-Jaeren",  "Maakaknuten",  "Stigafjellet")) 
+
+plot1 <- tpt %>% leaflet() %>% 
+   addTiles()  %>% 
+   addCircleMarkers(radius = 3, color = ~pal(WindFarm), 
+                       fillOpacity = 1,  stroke = TRUE) %>% 
+  addMiniMap(
+    position = "bottomright", zoomLevelOffset = -7, width = 300, height = 300, 
+    collapsedWidth = 19, collapsedHeight = 19) %>% 
+  addScaleBar(position = "bottomright")
+plot1$x$options = append(plot1$x$options, list("zoomControl" = FALSE,  "scaleBar"=TRUE))
+plot1
+
+crs(tpt)
+# 4326
+```
+
+
+## Extract elevation and explore
+https://cran.r-project.org/web/packages/elevatr/vignettes/introduction_to_elevatr.html
+- This only really works for coordinates inside the U.S. unfortunately
+
+Got some help from Jaime instead
+https://rdrr.io/cran/terra/man/extract.html
+r <- rast(path_to_tif)
+p <- vect(path_to_points)
+p <- project(p, crs(r, proj=TRUE))
+
+p_heiths = extract(p, r)
+
+
+
+```{r}
+
+tpt1 <- sf::st_as_sf(tpt, coords = c("x", "y"), crs = 4326)
+
+# Combine raster data
+## Following example from here 
+## https://stackoverflow.com/questions/15876591/merging-multiple-rasters-in-r
+
+r1 <- raster("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Locations/DTM_Elevation_StudyArea_Geonorge/6403_1_10m_z32.tif")
+
+r2 <- raster("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Locations/DTM_Elevation_StudyArea_Geonorge/6503_2_10m_z32.tif")
+
+r3 <- raster("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Locations/DTM_Elevation_StudyArea_Geonorge/6503_3_10m_z32.tif")
+
+r4 <- raster("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Locations/DTM_Elevation_StudyArea_Geonorge/6403_4_10m_z32.tif")
+
+tmp <- raster::merge(r1, r2)
+tmp1 <- raster::merge(tmp, r3)
+tmp2 <- raster::merge(tmp1, r4)
+
+r <-  as(tmp2, "SpatRaster")
+p <- vect(tpt1)
+p <- project(p, crs(r, proj=TRUE)) 
+
+## Elevation along with the coordinates of each point - now to merge with the points 
+p_height = terra::extract(r, p, ID = FALSE, xy = TRUE, bind = TRUE)
+
+## Now we can just look at the elevation values but cannot plot the data in a map
+DF <- as.data.frame(p_height) %>% 
+  rename(elevation = layer) %>% arrange(WindFarm, elevation)
+
+## Now make a simpler wind turbine ID column 
+
+### Now look for differences in elevation across the different wind turbines in each wind farm
+
+ggplot(DF %>% arrange(WindFarm, elevation)) +
+  geom_col(aes(x=Name, y = elevation, fill = WindFarm), position = "dodge") + 
+  scale_fill_manual(values = c("#663171","#e2998a","#cf3a36","#0c7156","#ea7428"), name = "") + 
+  theme_minimal() + 
+  xlab("Wind turbines") + 
+  ylab("Elevation (meters of sea level)")
+
+source("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/group_by_summary_stats.R")
+  
+group_by_summary_stats(DF, elevation, WindFarm)
+
+#   WindFarm         N  Mean Median    SD    SE Range      
+#   <fct>        <int> <dbl>  <dbl> <dbl> <dbl> <chr>      
+# 1 Bjerkreim       70  258.   250.  38.5  4.60 183.4-348.4
+# 2 Egersund        33  248.   247.  36.1  6.29 175.5-330.8
+# 3 Hoeg-Jaeren     32  233.   234.  22.5  3.98 192.2-268.3
+# 4 Maakaknuten     22  374.   370.  28.7  6.11 320.3-420.8
+# 5 Stigafjellet     7  399.   400.  16.9  6.40 375.1-424.4
+
+```
+
+
+## Create radii around selected wind turbines to estimate areas for deploying equipment 
