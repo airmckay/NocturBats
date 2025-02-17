@@ -19,8 +19,6 @@ Bjerkreim
 ### Explore variation in elevation across all points
 
 
-
-
 ```{r}
 library(tidyverse)
 library(dplyr)
@@ -68,7 +66,7 @@ output_today
 dir.create(output_today)
 output_today
 
-#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/SiteSelection_WindFarms2025_2025-02-04"
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/SiteSelection_WindFarms2025_2025-02-17"
 
 ```
 
@@ -94,6 +92,9 @@ kmlfile <- ("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatL
 
 tpt <- allKmlLayers(kmlfile)
 
+## Just for the Høg-Jæren study design proposal
+hjsd <- st_read("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Locations/HJ_SiteSelectionPt12025.KML")
+
 ## This is how you import the folders one at a time: 
 
 bj <- readOGR(kmlfile,"Bjerkreim") # 70 pts
@@ -108,7 +109,7 @@ bj$WindFarm <- "Bjerkreim"
 eg$WindFarm <- "Egersund"
 ma$WindFarm <- "Maakaknuten"
 st$WindFarm <- "Stigafjellet"
-hj$WindFarm <- "Hoeg-Jaere"
+hj$WindFarm <- "Hoeg-Jaeren"
 
 ## Right now the names for Egersund and Bjerkreim wind turbines are not terribly helpful so I am going to fix those
 
@@ -124,7 +125,9 @@ crs(ma)
 crs(st)
 crs(hj)
 
+crs(hjsd)
 ## All 4326
+
 
 ## Now try to combine everyone 
 temp1 <- spRbind (bj, eg) # 103 pts
@@ -161,9 +164,51 @@ plot1 <- tpt %>% leaflet() %>%
 plot1$x$options = append(plot1$x$options, list("zoomControl" = FALSE,  "scaleBar"=TRUE))
 plot1
 
-crs(tpt)
-# 4326
-```
+
+
+
+## Add site type column 
+hjsd$Name
+
+hjsd1 <- hjsd %>% 
+  mutate(SiteType = factor(case_when(
+  Name %in% c("HO-03",       "HO-09",
+              "HO-24",       "HO-31",
+              "HO-27",       "HO-22") ~ "Primary", 
+  TRUE ~ "Control"
+)))
+
+## Just so it is easier to plot
+hjsd1$Name
+hjsd1$Name <- gsub("CT-24b", "CT-24b   ", hjsd1$Name)
+hjsd1$Name <- gsub("CT-31a", "CT-31a   ", hjsd1$Name)
+hjsd1$Name
+
+summary(hjsd1$SiteType)
+# Control Primary 
+#       8       6
+
+pal <- colorFactor(
+  c("black", "#CF3A36"), 
+  domain = c("Primary",    "Alternative Primary",     "Control")) 
+
+plot1 <- hjsd1 %>% leaflet() %>% 
+   addTiles()  %>% 
+   addCircleMarkers(radius = 9, color = ~pal(SiteType), 
+                       fillOpacity = 1,  stroke = FALSE)
+plot1
+
+##  addMiniMap(
+#     position = "bottomright", zoomLevelOffset = -4, width = 300, height = 300, 
+#     collapsedWidth = 19, collapsedHeight = 19) %>% 
+#   addScaleBar(position = "bottomright")
+# plot1$x$options = append(plot1$x$options, list("zoomControl" = FALSE,  "scaleBar"=TRUE))
+
+# 
+# ,
+#                     label = ~Name,
+#   labelOptions = labelOptions(noHide = TRUE, offset=c(2,-9), textOnly = TRUE, textsize = "15px")) 
+# ```
 
 
 ## Extract elevation and explore
@@ -183,6 +228,8 @@ p_heiths = extract(p, r)
 ```{r}
 
 tpt1 <- sf::st_as_sf(tpt, coords = c("x", "y"), crs = 4326)
+
+writeOGR(tpt1, dsn = '.', layer = 'poly', driver = "ESRI Shapefile")
 
 # Combine raster data
 ## Following example from here 
@@ -233,6 +280,67 @@ group_by_summary_stats(DF, elevation, WindFarm)
 # 3 Hoeg-Jaeren     32  233.   234.  22.5  3.98 192.2-268.3
 # 4 Maakaknuten     22  374.   370.  28.7  6.11 320.3-420.8
 # 5 Stigafjellet     7  399.   400.  16.9  6.40 375.1-424.4
+
+table(DF$Name, DF$elevation)
+
+
+bj <- DF %>% filter(WindFarm == "Bjerkreim") %>% droplevels()
+summary(bj$elevation)
+
+ggplot(bj %>% arrange(WindFarm, elevation)) +
+  geom_col(aes(x=reorder(Name, elevation), y = elevation, fill = WindFarm), position = "dodge") + 
+  scale_fill_manual(values = c("#663171"), name = "") + 
+  theme_minimal() + 
+  xlab("Wind turbines") + 
+  ylab("Elevation (meters of sea level)")
+
+
+hj <- DF %>% filter(WindFarm == "Hoeg-Jaeren") %>% droplevels()
+summary(hj$elevation)
+
+ggplot(hj %>% arrange(WindFarm, elevation)) +
+  geom_col(aes(x=reorder(Name, elevation), y = elevation, fill = WindFarm), position = "dodge") + 
+  scale_fill_manual(values = c("#cf3a36"), name = "") + 
+  theme_minimal() + 
+  xlab("Wind turbines") + 
+  ylab("Elevation (meters of sea level)")
+
+
+eg <- DF %>% filter(WindFarm == "Egersund") %>% droplevels()
+summary(eg$elevation)
+
+ggplot(eg %>% arrange(WindFarm, elevation)) +
+  geom_col(aes(x=reorder(Name, elevation), y = elevation, fill = WindFarm), position = "dodge") + 
+  scale_fill_manual(values = c("#e2998a"), name = "") + 
+  theme_minimal() + 
+  xlab("Wind turbines") + 
+  ylab("Elevation (meters of sea level)")
+
+
+ma <- DF %>% filter(WindFarm == "Maakaknuten") %>% droplevels()
+summary(ma$elevation)
+
+
+ggplot(ma %>% arrange(WindFarm, elevation)) +
+  geom_col(aes(x=reorder(Name, elevation), y = elevation, fill = WindFarm), position = "dodge") + 
+  scale_fill_manual(values = c("#0c7156"), name = "") + 
+  theme_minimal() + 
+  xlab("Wind turbines") + 
+  ylab("Elevation (meters of sea level)")
+
+
+st <- DF %>% filter(WindFarm == "Stigafjellet") %>% droplevels()
+summary(st$elevation)
+
+
+ggplot(st %>% arrange(WindFarm, elevation)) +
+  geom_col(aes(x=reorder(Name, elevation), y = elevation, fill = WindFarm), position = "dodge") + 
+  scale_fill_manual(values = c("#ea7428"), name = "") + 
+  theme_minimal() + 
+  xlab("Wind turbines") + 
+  ylab("Elevation (meters of sea level)")
+
+
 
 ```
 
