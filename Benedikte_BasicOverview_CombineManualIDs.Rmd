@@ -1,0 +1,475 @@
+---
+title: "Benedikte_BasicOverview_CombineManualIDs"
+output: html_document
+date: "2025-02-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(janitor)
+library(renv)
+library(stringr)
+library(beepr)
+library(MetBrewer)
+library(randomcoloR)
+library(wesanderson)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(MoMAColors)
+
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
+
+## Setup output directory 
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs"
+
+file.name <- "Benedikte_BasicOverview_CombineManualIDs"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/MetData_2025-02-18"
+
+```
+
+
+
+```{r}
+
+#Utsira
+inputUT01 <- read_csv("D:/Benedikte/MSC/ID/UT-01/id.csv")
+# 1146 obs of 44 vars
+# Add a site column 
+inputUT01$site <- "UT-01"
+
+## Gismarvik
+inputGI01 <- read_csv("D:/Benedikte/MSC/ID/GI-01/id.csv")
+# 7492 obs of 44 vars
+# Add a site column 
+inputGI01$site <- "GI-01"
+
+inputGI03 <- read_csv("D:/Benedikte/MSC/ID/GI-03/id.csv")
+# 1862 obs of 44 vars 
+# Add a site column 
+inputGI03$site <- "GI-03"
+
+## check column names
+
+names(inputUT01) 
+names(inputGI01)
+names(inputGI03) 
+# Fix the Manual ID and AUTO ID name columns 
+inputUT01 <- inputUT01 %>% rename("MANUAL ID" = "MANUAL ID*")
+inputGI01 <- inputGI01 %>% rename("AUTO ID" = "AUTO ID*")
+inputGI03 <- inputGI03 %>% rename("MANUAL ID" = "MANUAL ID*")
+
+
+## First glance - syntax looks consistent - cool!!
+temp <- merge(inputGI01, inputGI03, all = TRUE) 
+dim(temp)
+# 9354  45 # 
+# 7492 + 1862 = 9354
+names(temp)
+
+noc <- merge(temp, inputUT01, all = TRUE) 
+dim(noc)
+# 10500    45
+# 9354 + 1146 = 10500, good!
+
+## Now create a detector type column 
+noc$detector <- "SM4-BATFS"
+dim(noc)
+# 10500    46
+
+
+
+### Coastal Monitoring Detectors - Song Meter Mini Bat 2 Li-ion ### 
+## Utsira 
+inputCM01<- read_csv("D:/Benedikte/MSC/ID/CM-01/id.csv") 
+# 3373 obs of 44 vars
+# Add a site column 
+inputCM01$site <- "CM-01"
+
+inputCM02<- read_csv("D:/Benedikte/MSC/ID/CM-02/id.csv") 
+# 576 obs of 44 vars
+# Add a site column 
+inputCM02$site <- "CM-02"
+
+## Gismarvik
+inputCM46<- read_csv("D:/Benedikte/MSC/ID/CM-46/id.csv") 
+# 5050 obs of 44 vars
+# Add a site column 
+inputCM46$site <- "CM-46"
+
+names(inputCM01)
+names(inputCM02)
+names(inputCM46)
+
+
+temp1 <- merge(inputCM01, inputCM02, all = TRUE) 
+# dim(inputCM01) + dim(inputCM02) = 3949 
+# 3949 - GOOD!  
+
+cm <- merge(temp1, inputCM46, all = TRUE)
+# 3949 + 5050
+# 8999 
+# The number of rows add up - good! 
+
+cm$detector <- "Song Meter Mini Bat 2 Li-ion"
+
+## Fix the Manual ID column name 
+cm <- cm %>% rename("MANUAL ID" = "MANUAL ID*")
+
+
+## Now combine cm and noc
+df <- merge(cm, noc, all = TRUE) 
+dim(df)
+# 19499    46
+
+dim(cm) + dim(noc) # this matches, good!
+# 46889 obs of 46 vars
+# write.csv(df, file = file.path(output_today, "Gismarvik_Utsira_2024_ManualIDCombined_forBenedikte.csv"), row.names = FALSE)
+
+
+```
+
+
+
+## Clean manual ID column
+```{r}
+names(df)
+## Housekeeping
+df1 <- df %>% 
+  rename(
+  filename = "IN FILE",
+  autoid = "AUTO ID",
+  manualid = "MANUAL ID",
+  DATE.12 = 'DATE-12',
+  HOUR.12 = 'HOUR-12',
+  TIME.12 = 'TIME-12') %>% 
+  mutate(autoid = factor(autoid), 
+         manualid = factor(manualid), 
+         site = factor(site), 
+         detector = factor(detector)) %>% 
+  dplyr::select(filename, DURATION, 
+                DATE, TIME, HOUR,
+                DATE.12, TIME.12, HOUR.12,
+                autoid, manualid, site, detector
+                )
+
+levels(df1$manualid)
+
+### Check for duplicates!
+test <- df1 %>% 
+  group_by(filename) %>% 
+  summarise(n = n()) %>% 
+  filter(n > 1) %>% 
+  arrange(desc(n))
+# No duplicates, that is cool. 
+  
+## Parse out multiple bat passes
+mcols <- c("manual_pass1", "manual_pass2", "manual_pass3")
+
+df2 <- df1 %>% 
+  tidyr::separate( col = manualid,
+                   sep = "_", 
+                   into = mcols)
+
+
+## re-attach the meta data  missing for the files of second and third bat observations
+
+# Only the second bat taxa found in a pass 
+bat2 <- df2 %>% dplyr::select(manual_pass2, filename) %>% drop_na() %>% 
+  rename(manual_pass = manual_pass2) %>% mutate(manual_pass = factor(manual_pass)) 
+dim(bat2) # 303   2
+# 805 obs with 2 bats 
+
+## Only the third bat taxa found in a pass 
+bat3 <- df2 %>% dplyr::select(manual_pass3, filename) %>% drop_na() %>%
+  rename(manual_pass = manual_pass3) %>% mutate(manual_pass = factor(manual_pass))
+dim(bat3)
+# 16 obs with 3 bats
+
+# remove these columns from df1 
+df3 <- df2 %>% dplyr::select(-c(manual_pass2, manual_pass3)) %>% 
+               rename(manual_pass = manual_pass1) %>% mutate(manual_pass = factor(manual_pass)) # 19499 obs
+
+blist <- bat2$filename # meta data for all bat passes which had multiple bats 
+
+## re-attach the meta data  missing for the files of second and third bat observations
+timemap <- df1 %>% 
+  dplyr::select(filename, 
+                          DATE, TIME, HOUR,
+                          DATE.12, TIME.12, HOUR.12,
+                          autoid, site, detector) %>% 
+  distinct() %>% filter(filename %in% blist) 
+
+dim(timemap)
+# 805  10
+
+
+bats2 <- left_join(bat2, timemap)
+bats3 <- left_join(bat3, timemap)
+                   
+## CHECK THE MATH! 
+# # 805 + 16 + 19499
+# = 20320
+df4 <- full_join(df3, bats2) # 19088 obs - that adds up, good!  
+df5 <- full_join(df4, bats3) # 19089 obs - good! 
+dim(df5)
+# 20320 - good! 
+
+summary(df5)
+summary(df5$manual_pass)
+# Now it is easier to see a few spelling errors and inconsistencies in the manual IDs.
+  #   ENIL   ENIL.B   ENIL.S   MYSB.B     MYSP   MYSP.B MYSP.B.S   MYSP.S 
+  #   1696      135       15        2     5758     2184       13       32 
+  #   NNOC     NYCT     NoID   NoID.B   NoID.S    Noise     PAUR   PISP.T 
+  #      6       61      709       45        4     6167       34      255 
+  #   PNAT   PNAT.B   PNAT.S   PNAT.T     PPYG   PPYG.B PPYG.B.S PPYG.B.T 
+  #    247       13        2        5     1966      316       10       23 
+  # PPYG.S PPYG.S.T   PPYG.T PPYG.T.S 
+  #     56        3      561        2 
+levels(df5$manual_pass) # looks good! 
+
+
+# Now behavior 
+df6 <- df5 %>%
+  mutate(manualid = as.character(manual_pass)) %>% 
+  mutate(behavior = case_when(
+    str_detect(manualid,".B.S") ~ "Feeding",
+    str_detect(manualid,".B.T") ~ "Feeding",
+    str_detect(manualid, ".B") ~ "Feeding",
+    str_detect(manualid, ".S") ~ "Social",
+    str_detect(manualid, ".T") ~ "Terretorial",
+    TRUE ~ "Commuting"
+  )) %>% 
+  mutate( behavior= factor(behavior),
+          manualid = factor(manualid)) 
+
+summary(df6$behavior)
+  # Commuting     Feeding      Social Terretorial 
+  #     10578        2741        6127         874 
+
+
+summary(df6$manualid)
+## Now remove the behavior tags from the manual acoustic analysis column 
+
+df6$mid <- factor(gsub(".B", "", df6$manualid)) 
+summary(df6$mid)
+
+df6$mid1 <- factor(gsub(".S", "", df6$mid)) 
+summary(df6$mid1)
+
+df6$mid2 <- factor(gsub(".T", "", df6$mid1)) 
+summary(df6$mid2)
+
+ # ENIL    MP    MY  NNOC    NY  NoID Noise  PAUR    PN    PP  PPYG 
+ # 1846  7987     2     6    61   758  6167    34   267   255  2937
+
+## Some small issues to remedy here with how the gsub function was interpretted 
+
+df7 <- df6 %>% mutate(manual.id = factor(case_when(
+  mid2 %in% c("MP", "MY") ~ "MYSP", 
+  mid2 == "NY" ~ "NYCT",
+  mid2 == "PN" ~ "PNAT", 
+  mid2 == "PP" ~ "PISP",
+  TRUE ~ mid2
+))) %>% 
+  dplyr::select(-c(manual_pass, manualid, mid, mid1, mid2))
+names(df7)
+
+summary(df7$manual.id)
+ # ENIL  MYSP  NNOC  NYCT  NoID Noise  PAUR  PISP  PNAT  PPYG 
+ # 1846  7989     6    61   758  6167    34   255   267  2937 
+
+#Nice! 
+# All clean! 
+
+# Add a more informative bat taxa column 
+DF <- df7 %>% mutate(taxa = factor(case_when(
+  manual.id == "MYSP" ~ "Myotis species", 
+  manual.id == "PAUR" ~ "Brown long-eared bat",
+  manual.id == "PISP" ~ "Pipistrellus species",
+  manual.id == "PNAT" ~ "Pipistrellus nathusii",
+  manual.id == "PPYG" ~ "Pipistrellus pygmaeus",
+  manual.id == "ENIL" ~ "Eptesicus nilssonii", 
+  manual.id == "NYCT" ~ "Nyctaloid",
+  manual.id == "NNOC" ~ "Nyctalus noctula",
+  manual.id == "NoID" ~ "Unknown bat", 
+  manual.id == "Noise" ~ "Not a bat", 
+)))  
+levels(DF$taxa)
+summary(DF$taxa)
+summary(DF)
+# 20320 obs of 14 vars
+
+write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
+# # 18.02.2025
+
+```
+
+
+
+## Exploring Benedikte's noisey dataset 
+```{r}
+summary(df1)
+
+#What is the percentage of noise recorded across sites?
+cm01 <- DF %>% filter(site == "CM-01")  
+cm02 <- DF %>% filter(site == "CM-02")  
+cm46 <- DF %>% filter(site == "CM-46")  
+ut01 <- DF %>% filter(site == "UT-01")  
+gi01 <- DF %>% filter(site == "GI-01")  
+gi03 <- DF %>% filter(site == "GI-03")  
+  
+noiserat_cm01 <- cm01 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(cm01) * 100)
+## 14.9 noise, 83.9 NoID
+
+noiserat_cm02 <- cm02 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(cm02) * 100)
+## 86.8% noise
+
+noiserat_cm46 <- cm46 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(cm46) * 100)
+## 9.64% noise. 31.6% NoID
+
+noiserat_ut01 <- ut01 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(ut01) * 100)
+## 43.1% noise
+
+noiserat_gi01 <- gi01 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(gi01) * 100)
+## 49% noise
+
+noiserat_gi03 <- gi03 %>% 
+  group_by(autoid) %>%
+  summarise(percentage = n() / nrow(gi03) * 100)
+## 6.18% noise
+
+
+## Make a figure illustrating this 
+barnoise <- ggplot(DF) + 
+  geom_bar(aes(x= site, fill = manual.id), position = "fill") +
+  scale_fill_manual(name = "", values = moma.colors("Warhol", n = 13)) + 
+  ylab("Proportion of recordings") + 
+  xlab("Site") +
+  theme(text = element_text(size = 25)) 
+barnoise
+
+#ggsave(path = output_today, filename = "AllSites_Benedikte_Noise.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+## Look at overall recording period 
+ggplot(DF) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "orange", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+# ggsave(path = output_today, filename = "BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+
+
+```
+
+
+## Remove noise and take another look 
+
+```{r}
+
+summary(DF$manual.id)
+# 6167     noise files that we will remove. 
+
+DF1 <- DF %>% dplyr::filter(manual.id != "Noise") %>% droplevels()
+dim(DF1)
+# 14153    14
+dim(DF) - dim(DF1)
+# The numbers add up, good! 
+
+## Simple dataset for easily making exploratory figures 
+# write.csv(DF1, file = file.path(output_today, "BenedikteData_AutoId_NoNoise_SimpleColumns.csv"))
+
+## Now take a look on what the recording activity looks like 
+ggplot(DF1) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "turquoise", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - Noise files removed") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+# ggsave(path = output_today, filename = "BasicRecordingOverview_noNoise.tiff", width = 23, height = 14, device='tiff', dpi=300)
+
+
+## And just because I am curious 
+ggplot(DF1 %>% filter(manual.id == "PNAT") %>% droplevels()) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "coral", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - auotid Nathusius Pip") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+# ggsave(path = output_today, filename = "BasicRecordingOverview_PNATonly.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+### Now add a subset of random noise files from reach site for Benedikte to also check 
+
+table(DF1$site, DF1$manual.id)
+  #       ENIL MYSP NNOC NYCT NoID PAUR PISP PNAT PPYG
+  # CM-01   10    0    6    0    0    0    0    8    1
+  # CM-02    3    0    0    5    0    0    0   35    3
+  # CM-46  598 2726    0   12  302   19  140   70  889
+  # GI-01  473 4944    0    5  397   10  115   78 1804
+  # GI-03  746  319    0    8   58    5    0   50  229
+  # UT-01   16    0    0   31    1    0    0   26   11
+
+summary(DF1$autoid)
+# 302 of the noise files were in fact bats! 
+
+summary(DF1$site)
+```
+
+
+
+### Update figures and tables for:
+- Solvind (GI, CM-46 and UT-01 detectors)
+- Atle (CM01 and CM02 sites)
