@@ -190,7 +190,7 @@ summary(hjsd1$SiteType)
 
 pal <- colorFactor(
   c("black", "#CF3A36"), 
-  domain = c("Primary",    "Alternative Primary",     "Control")) 
+  domain = c("Control", "Primary")) 
 
 plot1 <- hjsd1 %>% leaflet() %>% 
    addTiles()  %>% 
@@ -198,17 +198,18 @@ plot1 <- hjsd1 %>% leaflet() %>%
                        fillOpacity = 1,  stroke = FALSE)
 plot1
 
+
+#### Graveyard: 
 ##  addMiniMap(
 #     position = "bottomright", zoomLevelOffset = -4, width = 300, height = 300, 
 #     collapsedWidth = 19, collapsedHeight = 19) %>% 
 #   addScaleBar(position = "bottomright")
 # plot1$x$options = append(plot1$x$options, list("zoomControl" = FALSE,  "scaleBar"=TRUE))
 
-# 
-# ,
 #                     label = ~Name,
-#   labelOptions = labelOptions(noHide = TRUE, offset=c(2,-9), textOnly = TRUE, textsize = "15px")) 
-# ```
+#   labelOptions = labelOptions(noHide = TRUE, offset=c(2,-9), textOnly = TRUE, textsize = "15px"))
+
+```
 
 
 ## Extract elevation and explore
