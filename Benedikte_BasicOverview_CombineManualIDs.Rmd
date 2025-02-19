@@ -324,9 +324,10 @@ DF <- df7 %>% mutate(taxa = factor(case_when(
 levels(DF$taxa)
 summary(DF$taxa)
 summary(DF)
+dim(DF)
 # 20320 obs of 14 vars
 
-write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
+#write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
 # # 18.02.2025
 
 ```
@@ -335,7 +336,7 @@ write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_C
 
 ## Exploring Benedikte's noisey dataset 
 ```{r}
-summary(df1)
+summary(DF)
 
 #What is the percentage of noise recorded across sites?
 cm01 <- DF %>% filter(site == "CM-01")  
@@ -409,7 +410,6 @@ ggplot(DF) +
 ## Remove noise and take another look 
 
 ```{r}
-
 summary(DF$manual.id)
 # 6167     noise files that we will remove. 
 
@@ -473,3 +473,166 @@ summary(DF1$site)
 ### Update figures and tables for:
 - Solvind (GI, CM-46 and UT-01 detectors)
 - Atle (CM01 and CM02 sites)
+
+
+```{r}
+
+## Need to look at equipment failures later. For now, make a list of dates when the detectors were all deployed and assume that they were working the whole time. 
+
+
+#Three different deployment date ranges for the six detectors 
+# These are the dates that the detectors were deployed - the day that they were retreived to account for how our data will be aggregated to night. 
+ut01_dates <- seq(from = as.Date("2024-07-17"), to = as.Date("2024-10-17"), by = "day")
+# 93
+cm0102_dates_all <- seq(from = as.Date("2024-06-14"), to = as.Date("2024-10-16"), by = "day")
+# 125 
+gi_dates_all <-  seq(as.Date("2024-07-12"), to = as.Date("2024-10-08"), by = "day") 
+# 89
+
+
+ut01.dates <- expand.grid(site = "UT-01", night = ut01_dates) 
+# 93
+
+cm0102.dates <- expand.grid(site = c("CM-01", "CM-02"), night = cm0102_dates_all ) 
+# 250
+
+gi.dates <- expand.grid(site = c("GI-01", "GI-03", "CM-46"), night = gi_dates_all ) 
+# 267 
+
+
+temp1 <- full_join(ut01.dates, cm0102.dates)
+# 93 + 250 = 343
+# 343 - good! 
+
+all.dates <- full_join(temp1, gi.dates) %>% mutate(site = factor(site))
+# 343 + 267 = 615
+# 610 - good!
+
+summary(all.dates$site) # detector nights for all sites 
+# UT-01 CM-01 CM-02 GI-01 GI-03 CM-46 
+#    93   125   125    89    89    89 
+
+#######################################
+### Aggregate to night
+#######################################
+
+df <- DF1 %>%
+  group_by(site, manual.id, DATE.12) %>%
+ rename ("night"  = "DATE.12") %>% 
+  dplyr::summarize(batpass = sum(n()))
+## 818 obs of 4 variables
+
+taxamap <- DF1 %>% select(c(manual.id, taxa)) %>% distinct()
+sitemap <- DF1 %>% select(c(site, detector)) %>% distinct()
+
+temp<-expand.grid(site=unique(DF1$site), manual.id = unique(DF1$manual.id))
+temp2 <- left_join(all.dates, temp)
+dim(temp2) # 5490    3
+summary(temp2)
+
+temp3 <- left_join(temp2, taxamap)
+
+## Now add the bat pass data 
+temp4 <- merge(temp3, df, all.x = TRUE) %>% distinct()
+summary(temp4)
+
+# 4672 zero rows to be filled with zeros 
+temp4[is.na(temp4)] <- 0 
+summary(temp4)
+# 
+
+
+nbats <- temp4
+dim(nbats)
+# 5490    5
+sum(nbats$batpass) # 14153 
+# this is the same number of rows as DF1 so that is great
+
+
+## How many input files for the manual acoustic analysis? 
+fils <- DF1 %>% select(filename) %>% distinct()
+# 13332 input files, nosie excluded...  
+ 
+
+## Add back the metadata 
+meta1 <- left_join(nbats, taxamap)
+nbats1 <- left_join(meta1, sitemap)
+summary(nbats1)
+
+
+### Visualize to check for recording gaps 
+## Make it so that zero nights are different color 
+
+nbats2 <- nbats1 %>% mutate(batnight = factor(case_when(
+  batpass == 0 ~ "zero", 
+  batpass > 0 ~ "active"))) 
+summary(nbats2)
+
+
+## For the Utsira sites alone 
+ggplot(nbats2 %>% filter(site %in% c("CM-01", "CM-02", "UT-01")) %>% droplevels()) + 
+  geom_count(aes(x = night, y = site, size = batpass, color = batnight),
+             alpha = 0.7) +
+  scale_color_manual(values = c("#285B56", "gray"), guide = FALSE) + 
+  scale_size("Bat passes per night", range = c(2, 10)) + 
+  theme_minimal(base_size = 25) + 
+  xlab("Night in season (2024)") + 
+  ylab("") + 
+  ggtitle("UTSIRA - detector nights (black) and recording activity (red)")
+
+ggsave(path = output_today, filename = "Bat activity per site.tiff", width = 23, height = 14, device='tiff', dpi=300)
+
+
+## For the Gismarvik sites alone 
+ggplot(nbats2 %>% filter(site %in% c("CM-46", "GI-03", "GI-01")) %>% droplevels()) + 
+  geom_count(aes(x = night, y = site, size = batpass, color = batnight),
+             alpha = 0.7) +
+  scale_color_manual(values = c("#285B56", "gray"), guide = FALSE) + 
+  scale_size("Bat passes per night", range = c(2, 10)) + 
+  theme_minimal(base_size = 25) + 
+  xlab("Night in season (2024)") + 
+  ylab("") + 
+  ggtitle("GISMARVIK - detector nights (black) and recording activity (red)")
+
+ggsave(path = output_today, filename = "Bat activity per site.tiff", width = 23, height = 14, device='tiff', dpi=300)
+
+
+## Utsira alone 
+
+ut <- DF1 %>% filter(site %in% c("CM-01", "CM-02", "UT-01")) %>% droplevels()
+gi <- DF1 %>% filter(site %in% c("CM-46", "GI-03", "GI-01")) %>% droplevels()
+
+ggplot(ut, aes(x= DATE.12, color = detector)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 25) 
+
+ggplot(gi, aes(x= DATE.12, color = detector)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 25) 
+
+
+ggplot(ut, aes(x= taxa, fill = detector)) +
+          stat_count( geom = "bar", size= 4, alpha = 0.90) +
+   scale_fill_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Total bat passes") + xlab("") +
+   theme_minimal(base_size = 25) 
+
+ggplot(gi, aes(x= taxa, fill = detector)) +
+          stat_count( geom = "bar", size= 4, alpha = 0.90) +
+   scale_fill_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Total bat passes") + xlab("") +
+   theme_minimal(base_size = 20) 
+
+
+         
+
+```
+

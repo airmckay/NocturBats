@@ -1,0 +1,255 @@
+---
+title: "Sara_BasicOverview_CombineManualIDs"
+output: html_document
+date: "2025-02-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(janitor)
+library(renv)
+library(stringr)
+library(beepr)
+library(MetBrewer)
+library(randomcoloR)
+library(wesanderson)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(MoMAColors)
+
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/NocturBats"
+
+## Setup output directory 
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs"
+
+file.name <- "Sara_BasicOverview_CombineManualIDs"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/Sara_BasicOverview_CombineManualIDs_2025-02-19"
+
+```
+
+
+
+```{r}
+
+#Tungenes Fyr
+inputcm20 <- read_csv("D:/Sara_MSc/Acoustic analysis/OUTPUT/ID/CM-20/id.csv")
+# 972 obs of 44 vars
+# Add a site column 
+inputcm20$site <- "CM-20"
+names(inputcm20)
+
+# Fix the Manual ID and AUTO ID name columns 
+inputcm20 <- inputcm20 %>% rename("MANUAL ID" = "MANUAL ID*")
+
+
+df1 <- inputcm20 %>% 
+  rename(
+  filename = "IN FILE",
+  autoid = "AUTO ID",
+  manualid = "MANUAL ID",
+  DATE.12 = 'DATE-12',
+  HOUR.12 = 'HOUR-12',
+  TIME.12 = 'TIME-12') %>% 
+  mutate(autoid = factor(autoid), 
+         manualid = factor(manualid), 
+         site = factor(site)) %>% 
+  dplyr::select(filename, DURATION, 
+                DATE, TIME, HOUR,
+                DATE.12, TIME.12, HOUR.12,
+                autoid, manualid, site
+                )
+
+levels(df1$manualid)
+
+### Check for duplicates!
+test <- df1 %>% 
+  group_by(filename) %>% 
+  summarise(n = n()) %>% 
+  filter(n > 1) %>% 
+  arrange(desc(n))
+# No duplicates, that is cool.
+
+
+## simple fix first
+
+df1$manualid <- factor(gsub("Noise_Mammal_TUNE", "Noise", df1$manualid)) 
+df1$manualid <- factor(gsub("Noise_Mammal", "Noise", df1$manualid)) 
+levels(df1$manualid)  
+## Parse out multiple bat passes
+
+mcols <- c("manual_pass1", "manual_pass2")
+
+df2 <- df1 %>% 
+  tidyr::separate( col = manualid,
+                   sep = "_", 
+                   into = mcols)
+
+
+## re-attach the meta data  missing for the files of second and third bat observations
+
+# Only the second bat taxa found in a pass 
+bat2 <- df2 %>% dplyr::select(manual_pass2, filename) %>% drop_na() %>% 
+  rename(manual_pass = manual_pass2) %>% mutate(manual_pass = factor(manual_pass)) 
+dim(bat2) # 44   2
+# 44 obs with 2 bats 
+
+# remove these columns from df1 
+df3 <- df2 %>% dplyr::select(-manual_pass2) %>% 
+               rename(manual_pass = manual_pass1) %>% mutate(manual_pass = factor(manual_pass)) # 972 obs
+
+
+blist <- bat2$filename # meta data for all bat passes which had multiple bats 
+
+## re-attach the meta data  missing for the files of second and third bat observations
+timemap <- df1 %>% 
+  dplyr::select(filename, 
+                          DATE, TIME, HOUR,
+                          DATE.12, TIME.12, HOUR.12,
+                          autoid, site) %>% 
+  distinct() %>% filter(filename %in% blist) 
+
+dim(timemap)
+# 44  9
+
+
+bats2 <- left_join(bat2, timemap)
+
+## CHECK THE MATH! 
+df4 <- full_join(df3, bats2) # 1016 obs - that adds up, good!  
+dim(df4)
+# 972+44 = 1016, good! 
+# 1016 - good! 
+
+summary(df4)
+summary(df4$manual_pass)
+levels(df4$manual_pass) # looks good! 
+
+
+# Now behavior 
+df5 <- df4 %>%
+  mutate(manualid = as.character(manual_pass)) %>% 
+  mutate(behavior = case_when(
+    str_detect(manualid,".T.B") ~ "Feeding",
+    str_detect(manualid,".T.S.B") ~ "Feeding",
+    str_detect(manualid, ".B") ~ "Feeding",
+    str_detect(manualid, ".S") ~ "Social",
+    str_detect(manualid, ".T.S") ~ "Terretorial",
+    str_detect(manualid, ".T") ~ "Terretorial",
+    TRUE ~ "Commuting"
+  )) %>% 
+  mutate( behavior= factor(behavior),
+          manualid = factor(manualid)) 
+
+summary(df5$behavior)
+ # Commuting     Feeding      Social Terretorial 
+ #        520          36          26         434 
+
+
+summary(df5$manualid)
+## Now remove the behavior tags from the manual acoustic analysis column 
+
+df5$mid <- factor(gsub(".B", "", df5$manualid)) 
+summary(df5$mid)
+
+df5$mid1 <- factor(gsub(".S", "", df5$mid)) 
+summary(df5$mid1)
+
+df5$mid2 <- factor(gsub(".T", "", df5$mid1)) 
+summary(df5$mid2)
+
+ # ENIL  NNOC    NY Noise  PAUR    PN  PPYG 
+ #  274    10    71   121     2    56   482 
+
+## Some small issues to remedy here with how the gsub function was interpretted 
+
+df7 <- df5 %>% mutate(manual.id = factor(case_when(
+  mid2 == "NY" ~ "NYCT",
+  mid2 == "PN" ~ "PNAT", 
+  TRUE ~ mid2
+))) %>% 
+  dplyr::select(-c(manual_pass, manualid, mid, mid1, mid2))
+names(df7)
+
+summary(df7$manual.id)
+ # ENIL  NNOC  NYCT Noise  PAUR  PNAT  PPYG 
+ #  274    10    71   121     2    56   482 
+
+#Nice! 
+# All clean! 
+
+# Add a more informative bat taxa column 
+DF <- df7 %>% mutate(taxa = factor(case_when(
+  manual.id == "PAUR" ~ "Brown long-eared bat",
+  manual.id == "PNAT" ~ "Pipistrellus nathusii",
+  manual.id == "PPYG" ~ "Pipistrellus pygmaeus",
+  manual.id == "ENIL" ~ "Eptesicus nilssonii", 
+  manual.id == "NYCT" ~ "Nyctaloid",
+  manual.id == "NNOC" ~ "Nyctalus noctula",
+  manual.id == "NoID" ~ "Unknown bat", 
+  manual.id == "Noise" ~ "Not a bat", 
+)))  
+levels(DF$taxa)
+summary(DF$taxa)
+summary(DF)
+dim(DF)
+# 1016 obs of 13 vars
+
+#write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
+# # 18.02.2025
+
+
+ggplot(DF %>% filter(taxa!= "Not a bat") %>% droplevels(), aes(x= taxa)) +
+          stat_count( geom = "bar", size= 4, alpha = 0.90, fill = "#D02E55") +
+   ylab("Total bat passes") + xlab("") +
+   theme_minimal(base_size = 20) 
+
+
+ggplot(DF %>% filter(taxa!= "Not a bat") %>% droplevels(), aes(x= taxa)) +
+          stat_count( geom = "bar", size= 4, alpha = 0.90, fill = "#D02E55") +
+   ylab("Total bat passes") + xlab("") +
+   theme_minimal(base_size = 20) 
+
+ggplot(DF %>% filter(taxa!= "Not a bat") %>% droplevels(), aes(x= DATE.12)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90, color = "#D02E55") +
+   ylab("Bat passes per night") + xlab("") +
+   theme_minimal(base_size = 20) 
+
+ggplot(DF %>% filter(manual.id == "PNAT") %>% droplevels(), aes(x= DATE.12)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90, color = "#D02E55") +
+   ylab("Bat passes per night") + xlab("") +
+   theme_minimal(base_size = 20) 
+
+ggplot(DF %>% filter(manual.id == "NNOC") %>% droplevels(), aes(x= DATE.12)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90, color = "#D02E55") +
+   ylab("Bat passes per night") + xlab("") +
+   theme_minimal(base_size = 20)
+
+
+
+```
