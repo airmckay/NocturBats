@@ -59,18 +59,18 @@ output_today
 ```{r}
 
 #Utsira
-inputUT01 <- read_csv("D:/Benedikte/MSC/ID/UT-01/id.csv")
+inputUT01 <- read_csv("E:/Benedikte/MSC/ID/UT-01/id.csv")
 # 1146 obs of 44 vars
 # Add a site column 
 inputUT01$site <- "UT-01"
 
 ## Gismarvik
-inputGI01 <- read_csv("D:/Benedikte/MSC/ID/GI-01/id.csv")
+inputGI01 <- read_csv("E:/Benedikte/MSC/ID/GI-01/id.csv")
 # 7492 obs of 44 vars
 # Add a site column 
 inputGI01$site <- "GI-01"
 
-inputGI03 <- read_csv("D:/Benedikte/MSC/ID/GI-03/id.csv")
+inputGI03 <- read_csv("E:/Benedikte/MSC/ID/GI-03/id.csv")
 # 1862 obs of 44 vars 
 # Add a site column 
 inputGI03$site <- "GI-03"
@@ -104,21 +104,20 @@ dim(noc)
 # 10500    46
 
 
-
 ### Coastal Monitoring Detectors - Song Meter Mini Bat 2 Li-ion ### 
 ## Utsira 
-inputCM01<- read_csv("D:/Benedikte/MSC/ID/CM-01/id.csv") 
+inputCM01<- read_csv("E:/Benedikte/MSC/ID/CM-01/id.csv") 
 # 3373 obs of 44 vars
 # Add a site column 
 inputCM01$site <- "CM-01"
 
-inputCM02<- read_csv("D:/Benedikte/MSC/ID/CM-02/id.csv") 
+inputCM02<- read_csv("E:/Benedikte/MSC/ID/CM-02/id.csv") 
 # 576 obs of 44 vars
 # Add a site column 
 inputCM02$site <- "CM-02"
 
 ## Gismarvik
-inputCM46<- read_csv("D:/Benedikte/MSC/ID/CM-46/id.csv") 
+inputCM46<- read_csv("E:/Benedikte/MSC/ID/CM-46/id.csv") 
 # 5050 obs of 44 vars
 # Add a site column 
 inputCM46$site <- "CM-46"
@@ -188,6 +187,8 @@ test <- df1 %>%
   filter(n > 1) %>% 
   arrange(desc(n))
 # No duplicates, that is cool. 
+
+levels(df1$manualid)
   
 ## Parse out multiple bat passes
 mcols <- c("manual_pass1", "manual_pass2", "manual_pass3")
@@ -196,7 +197,7 @@ df2 <- df1 %>%
   tidyr::separate( col = manualid,
                    sep = "_", 
                    into = mcols)
-
+names(df2)
 
 ## re-attach the meta data  missing for the files of second and third bat observations
 
@@ -205,6 +206,8 @@ bat2 <- df2 %>% dplyr::select(manual_pass2, filename) %>% drop_na() %>%
   rename(manual_pass = manual_pass2) %>% mutate(manual_pass = factor(manual_pass)) 
 dim(bat2) # 303   2
 # 805 obs with 2 bats 
+
+head(bat2)
 
 ## Only the third bat taxa found in a pass 
 bat3 <- df2 %>% dplyr::select(manual_pass3, filename) %>% drop_na() %>%
@@ -602,6 +605,8 @@ ggsave(path = output_today, filename = "Bat activity per site.tiff", width = 23,
 ut <- DF1 %>% filter(site %in% c("CM-01", "CM-02", "UT-01")) %>% droplevels()
 gi <- DF1 %>% filter(site %in% c("CM-46", "GI-03", "GI-01")) %>% droplevels()
 
+
+## All bat activity, temporal trends - UTSIRA
 ggplot(ut, aes(x= DATE.12, color = detector)) +
           stat_count( geom = "point", size= 4, alpha = 0.90) +
    scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
@@ -609,6 +614,7 @@ ggplot(ut, aes(x= DATE.12, color = detector)) +
    ylab("Bat passes per night") + xlab("Night in season") +
    theme_minimal(base_size = 25) 
 
+## All bat activity, temporal trends - GISMARKVIK
 ggplot(gi, aes(x= DATE.12, color = detector)) +
           stat_count( geom = "point", size= 4, alpha = 0.90) +
    scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
@@ -617,6 +623,48 @@ ggplot(gi, aes(x= DATE.12, color = detector)) +
    theme_minimal(base_size = 25) 
 
 
+
+## Pnat only - UTSIRA
+ggplot(ut %>% filter(manual.id == "PNAT") %>% droplevels()
+       , aes(x= DATE.12, color = detector)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 25) 
+
+## Pnat only - GISMARVIK
+ggplot(gi %>% filter(manual.id == "PNAT") %>% droplevels()
+       , aes(x= DATE.12, color = detector)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 25) 
+
+
+
+## Nyctaloids only - UTSIRA
+ggplot(ut %>% filter(manual.id %in% c("NYCT", "NNOC")) %>% droplevels()
+       , aes(x= DATE.12, color = detector)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 25) 
+
+## Nyctaloids only - GISMARVIK
+ggplot(gi %>% filter(manual.id %in% c("NYCT", "NNOC")) %>% droplevels()
+       , aes(x= DATE.12, color = detector)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
+   facet_wrap(~site, nrow = 3) +
+   ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 25) 
+
+
+
+### Bar charts of different species 
 ggplot(ut, aes(x= taxa, fill = detector)) +
           stat_count( geom = "bar", size= 4, alpha = 0.90) +
    scale_fill_manual(values = c("#D07232", "#D02E55"), guide = FALSE) +
@@ -630,6 +678,8 @@ ggplot(gi, aes(x= taxa, fill = detector)) +
    facet_wrap(~site, nrow = 3) +
    ylab("Total bat passes") + xlab("") +
    theme_minimal(base_size = 20) 
+
+
 
 
          
