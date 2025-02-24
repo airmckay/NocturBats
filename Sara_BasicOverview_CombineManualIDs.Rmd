@@ -117,11 +117,13 @@ inputCM49$site <- "CM-49"
 # Fix the Manual ID and AUTO ID name columns 
 inputCM18 <- inputCM18 %>% rename("MANUAL ID" = "MANUAL ID*")
 inputCM19 <- inputCM19 %>% rename("MANUAL ID" = "MANUAL ID*") 
-
-
-# rename("AUTO ID" = "AUTO ID*")
-
-
+inputCM20 <- inputCM20 %>% rename("MANUAL ID" = "MANUAL ID*") 
+inputCM22 <- inputCM22 %>% rename("AUTO ID" = "AUTO ID*") 
+inputCM26 <- inputCM26 %>% rename("MANUAL ID" = "MANUAL ID*") 
+inputCM28 <- inputCM28 %>% rename("MANUAL ID" = "MANUAL ID*") 
+inputCM39 <- inputCM39 %>% rename("MANUAL ID" = "MANUAL ID*")
+inputCM40 <- inputCM40 %>% rename("MANUAL ID" = "MANUAL ID*")
+inputCM49 <- inputCM49 %>% rename("MANUAL ID" = "MANUAL ID*")
 # Does every input file for each site correspond to only ONE detector? check serial number in the file names
 ## Manually checked - looks good! 
 
@@ -134,10 +136,12 @@ cm <- bind_rows(inputCM18, inputCM19, inputCM20,
 306 + 1111  + 2194 
 
 dim(cm)
-# 20101    47
+# 20101    45
+names(cm)
+
 summary(cm) # No weird/obvious NAs 
-#write.csv(cm, file = file.path(output_today, "AllSaraSites_MetaData_wCM26.csv")) 
-# 13.01.2025
+# write.csv(cm, file = file.path(output_today, "AllSaraSites_ManualID.csv")) 
+# 24.02.2025
 
 ```
 
@@ -145,7 +149,7 @@ summary(cm) # No weird/obvious NAs
 
 
 ```{r}
-df1 <- inputcm20 %>% 
+df1 <- cm %>% 
   rename(
   filename = "IN FILE",
   autoid = "AUTO ID",
@@ -172,64 +176,68 @@ test <- df1 %>%
   arrange(desc(n))
 # No duplicates, that is cool.
 
-
-## simple fix first
-
-df1$manualid <- factor(gsub("Noise_Mammal_TUNE", "Noise", df1$manualid)) 
-df1$manualid <- factor(gsub("Noise_Mammal", "Noise", df1$manualid)) 
 levels(df1$manualid)  
+
+## simple fix first - noise is noise is noise 
+df1.5 <- df1 %>% mutate(
+  mid = factor(case_when(
+         str_detect(manualid, "Noise") ~ "Noise", 
+                            TRUE  ~ manualid))) %>% 
+  dplyr::select(-manualid) %>% 
+  rename(manualid = mid) 
+
+levels(df1.5$manualid)  
+
 ## Parse out multiple bat passes
+mcols <- c("manual_pass1", "manual_pass2", "manual_pass3")
 
-mcols <- c("manual_pass1", "manual_pass2")
-
-df2 <- df1 %>% 
+df2 <- df1.5 %>% 
   tidyr::separate( col = manualid,
                    sep = "_", 
                    into = mcols)
 
 
-## re-attach the meta data  missing for the files of second and third bat observations
-
 # Only the second bat taxa found in a pass 
-bat2 <- df2 %>% dplyr::select(manual_pass2, filename) %>% drop_na() %>% 
+bat2 <- df2 %>% select(manual_pass2, filename) %>% drop_na() %>% 
   rename(manual_pass = manual_pass2) %>% mutate(manual_pass = factor(manual_pass)) 
-dim(bat2) # 44   2
-# 44 obs with 2 bats 
+dim(bat2) # 303   2
+# 2199 obs with 2 bats 
+
+## Only the third bat taxa found in a pass 
+bat3 <- df2 %>% select(manual_pass3, filename) %>% drop_na() %>%
+  rename(manual_pass = manual_pass3) %>% mutate(manual_pass = factor(manual_pass))
+dim(bat3)
+# 77 obs with 3 bats
 
 # remove these columns from df1 
-df3 <- df2 %>% dplyr::select(-manual_pass2) %>% 
-               rename(manual_pass = manual_pass1) %>% mutate(manual_pass = factor(manual_pass)) # 972 obs
-
+mdf2 <- df2 %>% select(-c(manual_pass2, manual_pass3)) %>% 
+               rename(manual_pass = manual_pass1) %>% mutate(manual_pass = factor(manual_pass)) # 15470 obs
 
 blist <- bat2$filename # meta data for all bat passes which had multiple bats 
 
 ## re-attach the meta data  missing for the files of second and third bat observations
-timemap <- df1 %>% 
-  dplyr::select(filename, 
+timemap <- df2 %>% 
+  select(filename, 
                           DATE, TIME, HOUR,
                           DATE.12, TIME.12, HOUR.12,
                           autoid, site) %>% 
   distinct() %>% filter(filename %in% blist) 
 
-dim(timemap)
-# 44  9
+
 
 
 bats2 <- left_join(bat2, timemap)
+bats3 <- left_join(bat3, timemap)
 
-## CHECK THE MATH! 
-df4 <- full_join(df3, bats2) # 1016 obs - that adds up, good!  
-dim(df4)
-# 972+44 = 1016, good! 
-# 1016 - good! 
+# 20101 + 2199 + 77 = 22377
+mdf3 <- full_join(mdf2, bats2) # 22300 obs - that adds up, good!  
+mdf4 <- full_join(mdf3, bats3) # 22377 obs - good! 
+# 20101 + 2199 + 77 = 22377- great!
 
-summary(df4)
-summary(df4$manual_pass)
-levels(df4$manual_pass) # looks good! 
 
 
 # Now behavior 
-df5 <- df4 %>%
+df5 <- mdf4 %>%
   mutate(manualid = as.character(manual_pass)) %>% 
   mutate(behavior = case_when(
     str_detect(manualid,".T.B") ~ "Feeding",
@@ -244,8 +252,8 @@ df5 <- df4 %>%
           manualid = factor(manualid)) 
 
 summary(df5$behavior)
- # Commuting     Feeding      Social Terretorial 
- #        520          36          26         434 
+  # Commuting     Feeding      Social Terretorial 
+  #     13044        1334         459        7540 
 
 
 summary(df5$manualid)
@@ -260,22 +268,33 @@ summary(df5$mid1)
 df5$mid2 <- factor(gsub(".T", "", df5$mid1)) 
 summary(df5$mid2)
 
- # ENIL  NNOC    NY Noise  PAUR    PN  PPYG 
- #  274    10    71   121     2    56   482 
+df5$mid3 <- factor(gsub("NNOC.NY", "NYCT", df5$mid2))
+summary(df5$mid3)
+
+df5$mid4 <- factor(gsub("PPYG.", "PPYG", df5$mid3)) 
+summary(df5$mid4)
+
+ # ENIL    MY  NNOC    NY  NYCT  NoID Noise  PAUR    PN 
+ # 3982   732   517  3258     2    56  4206    68  2902 
+ #   PP  PPYG  VMUR 
+ #   43  6608     3 
 
 ## Some small issues to remedy here with how the gsub function was interpretted 
-
 df7 <- df5 %>% mutate(manual.id = factor(case_when(
-  mid2 == "NY" ~ "NYCT",
-  mid2 == "PN" ~ "PNAT", 
-  TRUE ~ mid2
+  mid4 == "NY" ~ "NYCT",
+  mid4 == "PN" ~ "PNAT", 
+  mid4 == "PP" ~"PISP", 
+  mid4 == "MY" ~"MYOT", 
+  TRUE ~ mid4
 ))) %>% 
-  dplyr::select(-c(manual_pass, manualid, mid, mid1, mid2))
+  dplyr::select(-c(manual_pass, manualid, mid, mid1, mid2, mid3, mid4))
 names(df7)
 
 summary(df7$manual.id)
- # ENIL  NNOC  NYCT Noise  PAUR  PNAT  PPYG 
- #  274    10    71   121     2    56   482 
+ # ENIL  MYOT  NNOC  NYCT  NoID Noise  PAUR  PISP  PNAT 
+ # 3982   732   517  3260    56  4206    68    43  2902 
+ # PPYG  VMUR 
+ # 6608     3 
 
 #Nice! 
 # All clean! 
@@ -285,9 +304,11 @@ DF <- df7 %>% mutate(taxa = factor(case_when(
   manual.id == "PAUR" ~ "Brown long-eared bat",
   manual.id == "PNAT" ~ "Pipistrellus nathusii",
   manual.id == "PPYG" ~ "Pipistrellus pygmaeus",
+  manual.id == "PISP" ~ "Pipistrellus species",
   manual.id == "ENIL" ~ "Eptesicus nilssonii", 
   manual.id == "NYCT" ~ "Nyctaloid",
   manual.id == "NNOC" ~ "Nyctalus noctula",
+  manual.id == "VMUR" ~ "Vespertilio murinus",
   manual.id == "NoID" ~ "Unknown bat", 
   manual.id == "Noise" ~ "Not a bat", 
 )))  
@@ -295,38 +316,113 @@ levels(DF$taxa)
 summary(DF$taxa)
 summary(DF)
 dim(DF)
-# 1016 obs of 13 vars
+# 22377 obs of 13 vars
 
-#write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
-# # 18.02.2025
-
-
-ggplot(DF %>% filter(taxa!= "Not a bat") %>% droplevels(), aes(x= taxa)) +
-          stat_count( geom = "bar", size= 4, alpha = 0.90, fill = "#D02E55") +
-   ylab("Total bat passes") + xlab("") +
-   theme_minimal(base_size = 20) 
+# write.csv(DF, file = file.path(output_today, "Sara_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
+# # 24.02.2025
 
 
-ggplot(DF %>% filter(taxa!= "Not a bat") %>% droplevels(), aes(x= taxa)) +
-          stat_count( geom = "bar", size= 4, alpha = 0.90, fill = "#D02E55") +
-   ylab("Total bat passes") + xlab("") +
-   theme_minimal(base_size = 20) 
+```
 
-ggplot(DF %>% filter(taxa!= "Not a bat") %>% droplevels(), aes(x= DATE.12)) +
-          stat_count( geom = "point", size= 4, alpha = 0.90, color = "#D02E55") +
-   ylab("Bat passes per night") + xlab("") +
-   theme_minimal(base_size = 20) 
 
-ggplot(DF %>% filter(manual.id == "PNAT") %>% droplevels(), aes(x= DATE.12)) +
-          stat_count( geom = "point", size= 4, alpha = 0.90, color = "#D02E55") +
-   ylab("Bat passes per night") + xlab("") +
-   theme_minimal(base_size = 20) 
 
-ggplot(DF %>% filter(manual.id == "NNOC") %>% droplevels(), aes(x= DATE.12)) +
-          stat_count( geom = "point", size= 4, alpha = 0.90, color = "#D02E55") +
-   ylab("Bat passes per night") + xlab("") +
-   theme_minimal(base_size = 20)
+## Visualize and explore - just to help you get started
+```{r}
+
+## Look at overall recording period 
+ggplot(DF) + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "orange", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+# ggsave(path = output_today, filename = "BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+
+## Now just look at PNAT
+ggplot(DF %>% filter(manual.id == "PNAT") %>% droplevels())  + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "#D02E55", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - Trolls") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+
+## Now just look at target taxa
+ggplot(DF %>% filter(manual.id == "NNOC") %>% droplevels())  + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "brown", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - Stor") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+
+ggplot(DF %>% filter(manual.id == "NYCT") %>% droplevels())  + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "black", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - Nyctaloids") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+
+ggplot(DF %>% filter(manual.id == "VMUR") %>% droplevels())  + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "pink", alpha = 0.5, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - VMUR") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+
+## Something strange here... 
+ggplot(DF %>% 
+         filter(manual.id == "PNAT") %>%
+         filter(behavior == "Terretorial") %>%
+         droplevels())  + 
+  geom_point(aes(x = DATE.12, y = site), 
+             color = "pink", alpha = 0.8, size = 3) +
+    xlab("Date in season") + ylab(" ") +
+  ggtitle("Recording activity - sexy pips") + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        text = element_text(size = 25),
+        axis.line = element_line(colour = "black"))
+
+# ggsave(path = output_today, filename = "PNAT_BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
+
+
+## Make a figure illustrating proportion of different taxa for each sites 
+barnoise <- ggplot(DF) + 
+  geom_bar(aes(x= site, fill = manual.id), position = "fill") +
+  scale_fill_manual(name = "Taxa", values = moma.colors("Warhol", n = 11)) + 
+  ylab("Proportion of recordings") + 
+  xlab("Site") +
+  theme(text = element_text(size = 25)) 
+barnoise
 
 
 
 ```
+
+
