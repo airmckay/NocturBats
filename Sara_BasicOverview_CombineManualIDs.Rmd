@@ -34,7 +34,7 @@ getwd()
 
 ## Setup output directory 
 
-output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" 
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs"
 
 file.name <- "Sara_BasicOverview_CombineManualIDs"
 
@@ -49,7 +49,7 @@ output_today
 dir.create(output_today)
 output_today
 
-#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/Sara_BasicOverview_CombineManualIDs_2025-02-19"
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/Sara_BasicOverview_CombineManualIDs_2025-02-24"
 
 ```
 
@@ -57,17 +57,94 @@ output_today
 
 ```{r}
 
-#Tungenes Fyr
-inputcm20 <- read_csv("D:/Sara_MSc/Acoustic analysis/OUTPUT/ID/CM-20/id.csv")
+## Read in the processed data
+
+# CM-18
+inputCM18 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-18/id.csv") 
+# 491 obs of 44 vars
+# Add a site column 
+inputCM18$site <- "CM-18"
+
+# CM-19
+inputCM19 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-19/id.csv") 
+# 1262 obs of 44 vars
+# Add a site column 
+inputCM19$site <- "CM-19"
+
+# CM-20
+inputCM20 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-20/id.csv") 
 # 972 obs of 44 vars
 # Add a site column 
-inputcm20$site <- "CM-20"
-names(inputcm20)
+inputCM20$site <- "CM-20"
+
+# CM-22
+inputCM22 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-22/id.csv")
+# 5445 obs of 44 vars
+# Add a site column 
+inputCM22$site <- "CM-22"
+
+# CM-26
+inputCM26 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-26/id.csv") 
+# 3089 obs of 44 vars
+# Add a site column 
+inputCM26$site <- "CM-26"
+
+# CM-28
+inputCM28 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-28/id.csv")
+# 5231 obs of 44 vars
+# Add a site column 
+inputCM28$site <- "CM-28"
+
+# CM-39
+inputCM39 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-39/id.csv") 
+# 306 obs of 44 vars
+# Add a site column 
+inputCM39$site <- "CM-39"
+
+inputCM40 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-40/id.csv")
+# 1111 obs of 44 vars
+# Add a site column 
+inputCM40$site <- "CM-40"
+
+# CM-49 
+inputCM49 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Sara/ID/CM-49/id.csv") 
+# 2194 obs of 44 vars
+# Add a site column 
+inputCM49$site <- "CM-49"
+
+## QUALITY CONTROL CHECK 
 
 # Fix the Manual ID and AUTO ID name columns 
-inputcm20 <- inputcm20 %>% rename("MANUAL ID" = "MANUAL ID*")
+inputCM18 <- inputCM18 %>% rename("MANUAL ID" = "MANUAL ID*")
+inputCM19 <- inputCM19 %>% rename("MANUAL ID" = "MANUAL ID*") 
 
 
+# rename("AUTO ID" = "AUTO ID*")
+
+
+# Does every input file for each site correspond to only ONE detector? check serial number in the file names
+## Manually checked - looks good! 
+
+cm <- bind_rows(inputCM18, inputCM19, inputCM20,
+                inputCM22, inputCM26, inputCM28, 
+                inputCM39, inputCM40, inputCM49)  
+
+491 + 1262 + 972 + 
+5445 + 3089 + 5231 + 
+306 + 1111  + 2194 
+
+dim(cm)
+# 20101    47
+summary(cm) # No weird/obvious NAs 
+#write.csv(cm, file = file.path(output_today, "AllSaraSites_MetaData_wCM26.csv")) 
+# 13.01.2025
+
+```
+
+
+
+
+```{r}
 df1 <- inputcm20 %>% 
   rename(
   filename = "IN FILE",
