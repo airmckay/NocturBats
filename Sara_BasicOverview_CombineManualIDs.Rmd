@@ -34,7 +34,7 @@ getwd()
 
 ## Setup output directory 
 
-output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs"
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" 
 
 file.name <- "Sara_BasicOverview_CombineManualIDs"
 

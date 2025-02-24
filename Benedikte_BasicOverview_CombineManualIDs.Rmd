@@ -35,7 +35,7 @@ getwd()
 
 ## Setup output directory 
 
-output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs"
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" 
 
 file.name <- "Benedikte_BasicOverview_CombineManualIDs"
 
@@ -50,7 +50,7 @@ output_today
 dir.create(output_today)
 output_today
 
-#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/MetData_2025-02-18"
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/Benedikte_BasicOverview_CombineManualIDs_2025-02-24"
 
 ```
 
@@ -59,18 +59,18 @@ output_today
 ```{r}
 
 #Utsira
-inputUT01 <- read_csv("E:/Benedikte/MSC/ID/UT-01/id.csv")
+inputUT01 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/ID/ID/UT-01/id.csv")
 # 1146 obs of 44 vars
 # Add a site column 
 inputUT01$site <- "UT-01"
 
 ## Gismarvik
-inputGI01 <- read_csv("E:/Benedikte/MSC/ID/GI-01/id.csv")
+inputGI01 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/ID/ID/GI-01/id.csv")
 # 7492 obs of 44 vars
 # Add a site column 
 inputGI01$site <- "GI-01"
 
-inputGI03 <- read_csv("E:/Benedikte/MSC/ID/GI-03/id.csv")
+inputGI03 <- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/ID/ID/GI-03/id.csv")
 # 1862 obs of 44 vars 
 # Add a site column 
 inputGI03$site <- "GI-03"
@@ -106,18 +106,18 @@ dim(noc)
 
 ### Coastal Monitoring Detectors - Song Meter Mini Bat 2 Li-ion ### 
 ## Utsira 
-inputCM01<- read_csv("E:/Benedikte/MSC/ID/CM-01/id.csv") 
+inputCM01<- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/ID/ID/CM-01/id.csv") 
 # 3373 obs of 44 vars
 # Add a site column 
 inputCM01$site <- "CM-01"
 
-inputCM02<- read_csv("E:/Benedikte/MSC/ID/CM-02/id.csv") 
+inputCM02<- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/ID/ID/CM-02/id.csv") 
 # 576 obs of 44 vars
 # Add a site column 
 inputCM02$site <- "CM-02"
 
 ## Gismarvik
-inputCM46<- read_csv("E:/Benedikte/MSC/ID/CM-46/id.csv") 
+inputCM46<- read_csv("P:/SW_CoastalMonitoring/Data_analysis_2024/MSc_Theses/Benedikte/ID/ID/CM-46/id.csv") 
 # 5050 obs of 44 vars
 # Add a site column 
 inputCM46$site <- "CM-46"
@@ -330,8 +330,8 @@ summary(DF)
 dim(DF)
 # 20320 obs of 14 vars
 
-#write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
-# # 18.02.2025
+# write.csv(DF, file = file.path(output_today, "Benedikte_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
+# # 24.02.2025
 
 ```
 
@@ -469,6 +469,8 @@ summary(DF1$autoid)
 # 302 of the noise files were in fact bats! 
 
 summary(DF1$site)
+# CM-01 CM-02 CM-46 GI-01 GI-03 UT-01 
+#    25    46  4756  7826  1415    85
 ```
 
 
@@ -480,11 +482,10 @@ summary(DF1$site)
 
 ```{r}
 
-## Need to look at equipment failures later. For now, make a list of dates when the detectors were all deployed and assume that they were working the whole time. 
-
+## OBS!!## Need to look at equipment failures later. For now, make a list of dates when the detectors were all deployed and assume that they were working the whole time. 
 
 #Three different deployment date ranges for the six detectors 
-# These are the dates that the detectors were deployed - the day that they were retreived to account for how our data will be aggregated to night. 
+# These are the dates that the detectors were deployed - the day that they were retrieved to account for how our data will be aggregated to night. 
 ut01_dates <- seq(from = as.Date("2024-07-17"), to = as.Date("2024-10-17"), by = "day")
 # 93
 cm0102_dates_all <- seq(from = as.Date("2024-06-14"), to = as.Date("2024-10-16"), by = "day")
@@ -583,7 +584,7 @@ ggplot(nbats2 %>% filter(site %in% c("CM-01", "CM-02", "UT-01")) %>% droplevels(
   ylab("") + 
   ggtitle("UTSIRA - detector nights (black) and recording activity (red)")
 
-ggsave(path = output_today, filename = "Bat activity per site.tiff", width = 23, height = 14, device='tiff', dpi=300)
+#ggsave(path = output_today, filename = "Bat activity per site.tiff", width = 23, height = 14, device='tiff', dpi=300)
 
 
 ## For the Gismarvik sites alone 
@@ -597,7 +598,7 @@ ggplot(nbats2 %>% filter(site %in% c("CM-46", "GI-03", "GI-01")) %>% droplevels(
   ylab("") + 
   ggtitle("GISMARVIK - detector nights (black) and recording activity (red)")
 
-ggsave(path = output_today, filename = "Bat activity per site.tiff", width = 23, height = 14, device='tiff', dpi=300)
+#ggsave(path = output_today, filename = "Bat activity per site.tiff", width = 23, height = 14, device='tiff', dpi=300)
 
 
 ## Utsira alone 
