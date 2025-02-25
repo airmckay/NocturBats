@@ -50,7 +50,7 @@ output_today
 dir.create(output_today)
 output_today
 
-#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/Benedikte_BasicOverview_CombineManualIDs_2025-02-24"
+#"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/Benedikte_BasicOverview_CombineManualIDs_2025-02-25"
 
 ```
 
@@ -259,9 +259,9 @@ levels(df5$manual_pass) # looks good!
 
 
 # Now behavior 
-df5 <- mdf4 %>%
-  mutate(manualid = as.character(manual_pass)) %>% 
-  mutate(behavior = case_when(
+df6 <- df5 %>%
+  dplyr::mutate(manualid = as.character(manual_pass)) %>% 
+  dplyr::mutate(behavior = case_when(
     manualid == "Noise" ~ "Noise",
     str_detect(manualid,"\\.T\\.B") ~ "Feeding",
     str_detect(manualid,"\\.T\\.S\\.B") ~ "Feeding",
@@ -271,44 +271,38 @@ df5 <- mdf4 %>%
     str_detect(manualid, "\\.T") ~ "Terretorial",
     TRUE ~ "Commuting"
   )) %>% 
-  mutate( behavior= factor(behavior),
+  dplyr::mutate( behavior= factor(behavior),
           manualid = factor(manualid)) 
 
+summary(df6)
 summary(df6$behavior)
-  # Commuting     Feeding      Social Terretorial 
-  #     10578        2741        6127         874 
-
+  # Commuting     Feeding       Noise      Social Terretorial 
+  #     10477        2741        6167         114         821 
 
 summary(df6$manualid)
 ## Now remove the behavior tags from the manual acoustic analysis column 
 
-df6$mid <- factor(gsub(".B", "", df6$manualid)) 
+df6$mid <- factor(gsub("\\.B", "", df6$manualid)) 
 summary(df6$mid)
 
-df6$mid1 <- factor(gsub(".S", "", df6$mid)) 
+df6$mid1 <- factor(gsub("\\.S", "", df6$mid)) 
 summary(df6$mid1)
 
-df6$mid2 <- factor(gsub(".T", "", df6$mid1)) 
+df6$mid2 <- factor(gsub("\\.T", "", df6$mid1)) 
 summary(df6$mid2)
 
- # ENIL    MP    MY  NNOC    NY  NoID Noise  PAUR    PN    PP  PPYG 
- # 1846  7987     2     6    61   758  6167    34   267   255  2937
+df6$mid3 <- factor(gsub("MYSB", "MYSP", df6$mid2)) 
+summary(df6$mid3)
 
-## Some small issues to remedy here with how the gsub function was interpretted 
 
-df7 <- df6 %>% mutate(manual.id = factor(case_when(
-  mid2 %in% c("MP", "MY") ~ "MYSP", 
-  mid2 == "NY" ~ "NYCT",
-  mid2 == "PN" ~ "PNAT", 
-  mid2 == "PP" ~ "PISP",
-  TRUE ~ mid2
-))) %>% 
-  dplyr::select(-c(manual_pass, manualid, mid, mid1, mid2))
+## Some small issues to remedy here with how the gsub function was interpreted 
+df7 <- df6 %>% 
+  dplyr::mutate(manual.id = factor(mid3)) %>% 
+  dplyr::select(-c(manual_pass, manualid, mid, mid1, mid2, mid3))
 names(df7)
 
 summary(df7$manual.id)
- # ENIL  MYSP  NNOC  NYCT  NoID Noise  PAUR  PISP  PNAT  PPYG 
- # 1846  7989     6    61   758  6167    34   255   267  2937 
+summary(df7)
 
 #Nice! 
 # All clean! 
