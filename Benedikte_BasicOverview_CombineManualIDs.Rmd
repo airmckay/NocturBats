@@ -259,14 +259,16 @@ levels(df5$manual_pass) # looks good!
 
 
 # Now behavior 
-df6 <- df5 %>%
+df5 <- mdf4 %>%
   mutate(manualid = as.character(manual_pass)) %>% 
   mutate(behavior = case_when(
-    str_detect(manualid,".B.S") ~ "Feeding",
-    str_detect(manualid,".B.T") ~ "Feeding",
-    str_detect(manualid, ".B") ~ "Feeding",
-    str_detect(manualid, ".S") ~ "Social",
-    str_detect(manualid, ".T") ~ "Terretorial",
+    manualid == "Noise" ~ "Noise",
+    str_detect(manualid,"\\.T\\.B") ~ "Feeding",
+    str_detect(manualid,"\\.T\\.S\\.B") ~ "Feeding",
+    str_detect(manualid, "\\.B") ~ "Feeding",
+    str_detect(manualid, "\\.S") ~ "Social",
+    str_detect(manualid, "\\.T\\.S") ~ "Terretorial",
+    str_detect(manualid, "\\.T") ~ "Terretorial",
     TRUE ~ "Commuting"
   )) %>% 
   mutate( behavior= factor(behavior),

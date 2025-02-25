@@ -168,6 +168,10 @@ df1 <- cm %>%
 
 levels(df1$manualid)
 
+### Something a bit strange happened with the PNAT.T observations later in this workflow. I am going to create a reference to the original manual.ids to check this later... I fixed the original issue but I will leave this code here in case a ref object is useful in future workflows. 
+
+# ref <- df1 %>% select(filename, manualid) 
+
 ### Check for duplicates!
 test <- df1 %>% 
   group_by(filename) %>% 
@@ -234,67 +238,64 @@ mdf3 <- full_join(mdf2, bats2) # 22300 obs - that adds up, good!
 mdf4 <- full_join(mdf3, bats3) # 22377 obs - good! 
 # 20101 + 2199 + 77 = 22377- great!
 
-
+levels(mdf4$manual_pass)
 
 # Now behavior 
 df5 <- mdf4 %>%
   mutate(manualid = as.character(manual_pass)) %>% 
   mutate(behavior = case_when(
-    str_detect(manualid,".T.B") ~ "Feeding",
-    str_detect(manualid,".T.S.B") ~ "Feeding",
-    str_detect(manualid, ".B") ~ "Feeding",
-    str_detect(manualid, ".S") ~ "Social",
-    str_detect(manualid, ".T.S") ~ "Terretorial",
-    str_detect(manualid, ".T") ~ "Terretorial",
+    manualid == "Noise" ~ "Noise",
+    str_detect(manualid,"\\.T\\.B") ~ "Feeding",
+    str_detect(manualid,"\\.T\\.S\\.B") ~ "Feeding",
+    str_detect(manualid, "\\.B") ~ "Feeding",
+    str_detect(manualid, "\\.S") ~ "Social",
+    str_detect(manualid, "\\.T\\.S") ~ "Terretorial",
+    str_detect(manualid, "\\.T") ~ "Terretorial",
     TRUE ~ "Commuting"
   )) %>% 
   mutate( behavior= factor(behavior),
           manualid = factor(manualid)) 
 
 summary(df5$behavior)
-  # Commuting     Feeding      Social Terretorial 
-  #     13044        1334         459        7540 
+  # Commuting     Feeding       Noise      Social Terretorial 
+  #     15289        1334        4206         421        1127 
 
 
 summary(df5$manualid)
 ## Now remove the behavior tags from the manual acoustic analysis column 
 
-df5$mid <- factor(gsub(".B", "", df5$manualid)) 
+df5$mid <- factor(gsub("\\.B", "", df5$manualid)) 
 summary(df5$mid)
 
-df5$mid1 <- factor(gsub(".S", "", df5$mid)) 
+df5$mid1 <- factor(gsub("\\.S", "", df5$mid)) 
 summary(df5$mid1)
 
-df5$mid2 <- factor(gsub(".T", "", df5$mid1)) 
+df5$mid2 <- factor(gsub("\\.T", "", df5$mid1)) 
 summary(df5$mid2)
 
 df5$mid3 <- factor(gsub("NNOC.NY", "NYCT", df5$mid2))
 summary(df5$mid3)
 
-df5$mid4 <- factor(gsub("PPYG.", "PPYG", df5$mid3)) 
+df5$mid4 <- factor(gsub("NYCTCT", "NYCT", df5$mid3))
 summary(df5$mid4)
 
- # ENIL    MY  NNOC    NY  NYCT  NoID Noise  PAUR    PN 
- # 3982   732   517  3258     2    56  4206    68  2902 
- #   PP  PPYG  VMUR 
- #   43  6608     3 
+df5$mid5 <- factor(gsub("PPYG.", "PPYG", df5$mid4)) 
+summary(df5$mid5)
+
+# ENIL  MYOT  NNOC  NYCT  NoID Noise  PAUR  PISP  PNAT  PPYG  VMUR 
+#  3982   732   517  3260    56  4206    68    43  2902  6608     3
 
 ## Some small issues to remedy here with how the gsub function was interpretted 
-df7 <- df5 %>% mutate(manual.id = factor(case_when(
-  mid4 == "NY" ~ "NYCT",
-  mid4 == "PN" ~ "PNAT", 
-  mid4 == "PP" ~"PISP", 
-  mid4 == "MY" ~"MYOT", 
-  TRUE ~ mid4
-))) %>% 
-  dplyr::select(-c(manual_pass, manualid, mid, mid1, mid2, mid3, mid4))
+df7 <- df5 %>% 
+  mutate(manual.id = mid5) %>% 
+  dplyr::select(-c(
+  manual_pass, manualid, mid, mid1, mid2, mid3, mid4, mid5))
+  
 names(df7)
 
 summary(df7$manual.id)
- # ENIL  MYOT  NNOC  NYCT  NoID Noise  PAUR  PISP  PNAT 
- # 3982   732   517  3260    56  4206    68    43  2902 
- # PPYG  VMUR 
- # 6608     3 
+ # ENIL  MYOT  NNOC  NYCT  NoID Noise  PAUR  PISP  PNAT  PPYG  VMUR 
+ # 3982   732   517  3260    56  4206    68    43  2902  6608     3 
 
 #Nice! 
 # All clean! 
@@ -302,6 +303,7 @@ summary(df7$manual.id)
 # Add a more informative bat taxa column 
 DF <- df7 %>% mutate(taxa = factor(case_when(
   manual.id == "PAUR" ~ "Brown long-eared bat",
+  manual.id == "MYOT" ~ "Myotis species",
   manual.id == "PNAT" ~ "Pipistrellus nathusii",
   manual.id == "PPYG" ~ "Pipistrellus pygmaeus",
   manual.id == "PISP" ~ "Pipistrellus species",
@@ -319,7 +321,7 @@ dim(DF)
 # 22377 obs of 13 vars
 
 # write.csv(DF, file = file.path(output_today, "Sara_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv")) 
-# # 24.02.2025
+# # 25.02.2025
 
 
 ```
@@ -355,9 +357,11 @@ ggplot(DF %>% filter(manual.id == "PNAT") %>% droplevels())  +
         panel.background = element_blank(), 
         text = element_text(size = 25),
         axis.line = element_line(colour = "black"))
+# ggsave(path = output_today, filename = "PNAT_BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
 
-## Now just look at target taxa
+
+## Now just look at target taxa / behaviors
 ggplot(DF %>% filter(manual.id == "NNOC") %>% droplevels())  + 
   geom_point(aes(x = DATE.12, y = site), 
              color = "brown", alpha = 0.5, size = 3) +
@@ -408,8 +412,6 @@ ggplot(DF %>%
         panel.background = element_blank(), 
         text = element_text(size = 25),
         axis.line = element_line(colour = "black"))
-
-# ggsave(path = output_today, filename = "PNAT_BasicRecordingOverview.tiff", width = 23, height = 14, device='tiff', dpi=300) 
 
 
 ## Make a figure illustrating proportion of different taxa for each sites 
