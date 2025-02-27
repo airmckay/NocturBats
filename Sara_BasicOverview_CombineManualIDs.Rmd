@@ -427,4 +427,95 @@ barnoise
 
 ```
 
+## Figures of Obrestad Fyr for communicating with the landowners/getting access
+```{r}
+
+bats <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/GitHubLink/CoastalMonitoring/Outputs/Sara_BasicOverview_CombineManualIDs_2025-02-25/Sara_ManualAcousticAnalysis_Cleaned_MissingFilesNotIncluded.csv",col_select = -1)
+names(bats)
+ob <- bats %>% 
+  filter(site == "CM-28") %>% 
+  mutate(behavior = factor(behavior), 
+         site = factor(site), 
+         taxa = factor(taxa), 
+         manual.id = factor(manual.id), 
+         autoid = factor(autoid)) 
+summary(ob)  
+dim(ob)
+# 5915  
+
+bats$site <- factor(bats$site)
+levels(bats$site)
+
+ob1 <- ob %>% filter(manual.id != "Noise") %>% droplevels()
+
+
+summary(ob$manual.id)
+ # ENIL  NNOC  NYCT  NoID Noise  PAUR  PISP  PNAT  PPYG  VMUR 
+ #  343     8   586    15   473     2    20  1420  3047     1 
+  
+summary(ob$autoid) 
+# BARBAR NYCNOC   NoID  Noise PIPNAT PIPPYG PLEAUR 
+#    108    181   1237      5   1417   2946     21 
+
+barnoise <- ggplot(ob1, aes(x= taxa, fill = taxa)) + 
+  stat_count(geom = "bar", size= 4, alpha = 0.90) +
+  scale_fill_manual(name = "Taxa", values = moma.colors("Warhol", n = 10)) + 
+  ylab("Number of recordings") + 
+  xlab("") +
+  theme_minimal(base_size = 15)
+barnoise
+
+
+
+
+
+ggplot(ob1, aes(x= DATE.12, color = taxa)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(name = "Taxa", values = moma.colors("Warhol", n = 10)) +
+   ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 20) 
+
+ggplot(ob1, aes(x= DATE.12))  + 
+  stat_count(geom = "point", size= 4, alpha = 0.90, color = "#D02E55") +
+     ylab("Bat passes per night") + xlab("Night in season") +
+   theme_minimal(base_size = 20) 
+
+
+ggplot(ob %>% filter(manual.id %in% c("PNAT", "NYCT", "NNOC", "VMUR")) %>% droplevels(), aes(x= DATE.12, color = taxa)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90) +
+   scale_color_manual(name = "Taxa", values = c("#D1AAC2", "#A44F6C", "#3FA750", "#FBA603")) +
+  facet_wrap(~taxa, nrow=5) + 
+   ylab("Bat passes per night") + xlab("Night in season") +
+  ggtitle("Species capable of long distance migration") +
+   theme_minimal(base_size = 20) 
+
+ggplot(ob %>% filter(manual.id == "PNAT") %>% droplevels(), 
+aes(x= DATE.12, color = taxa)) +
+          stat_count( geom = "point", size= 4, alpha = 0.90, color = "#3FA750") +
+   ylab("Bat passes per night") + xlab("Night in season") +
+  ggtitle("Trollflaggermus") +
+   theme_minimal(base_size = 20) 
+
+
+## Also Orrefriluftshus 
+
+or <- bats %>% 
+  filter(site == "CM-26") %>% 
+  mutate(behavior = factor(behavior), 
+         site = factor(site), 
+         taxa = factor(taxa), 
+         manual.id = factor(manual.id), 
+         autoid = factor(autoid)) 
+summary(or)  
+dim(or)
+# 3367        
+
+or1 <- or %>% filter(manual.id != "Noise") %>% droplevels()
+
+
+summary(or1$manual.id)
+# ENIL NNOC NYCT NoID PAUR PISP PNAT PPYG VMUR 
+#  725  140 1256   11   56    2  244  282    2             
+
+```
 

@@ -128,6 +128,11 @@ inputCM28 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-28/WAV/KP
 # Add a site column 
 inputCM28$site <- "CM-28"
 
+test <- inputCM28 %>% mutate(autoid = factor(`AUTO ID*`))
+summary(test$autoid)
+# BARBAR EPTNIL MYODAU NYCNOC   NoID  Noise PIPNAT PIPPYG PLEAUR VESMUR 
+#     99  10924      1    177   1079  38532   1181   2676     19    230
+
 # CM-49 
 inputCM49 <- read_csv("P:/SW_CoastalMonitoring/Data_collection_2024/CM-49/WAV/KPRO_V1/id.csv") 
 # 22690 obs of 44 vars
