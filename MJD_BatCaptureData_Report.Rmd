@@ -288,10 +288,39 @@ crs(boxdf2$geometry)
 mapview(boxdf2)
 
 # Looks right!! 
+summary(boxdf2$Locality)
+# 41 at Mosvatnet 
 
+mosvatnet <- as.data.frame(boxdf1) %>% 
+  dplyr::filter(Locality == "Mosvatnet") %>% 
+  droplevels()
+
+mo <- st_as_sf(mosvatnet, coords=c("lon", "lat"), crs = "+proj=latlong +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+
+mapview(mo)
+st_write(mo,"Mosvatnet.kml") # Moved to locations folder for Noctur  bat boxes on OneDrive
 
 # write.csv(boxdf2, file = file.path(output_today, "AllBatBoxLocations_Combined.csv"))
 # 07.01.2025
+
+
+
+### Quickly explore the NZF bat box locations in Agder
+agder <- st_read("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/Locations/ListaFarsundNZF.KML")
+
+crs(agder) 
+# GEOGCRS[\"WGS 84\   EPSG\",4326]
+plot1 <- agder %>% leaflet() %>% 
+   addTiles()  %>% 
+   addCircleMarkers(radius = 3, color = "red", 
+                       fillOpacity = 0.85,  stroke = TRUE) %>% 
+  addMiniMap(
+    position = "bottomright", zoomLevelOffset = -7, width = 300, height = 300, 
+    collapsedWidth = 19, collapsedHeight = 19) %>% 
+  addScaleBar(position = "bottomright")
+plot1$x$options = append(plot1$x$options, list("zoomControl" = FALSE,  "scaleBar"=TRUE))
+plot1
+8+6
 
 ```
 
