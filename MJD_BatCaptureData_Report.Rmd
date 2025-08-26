@@ -68,11 +68,11 @@ dir.create(output_today)
 output_today
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2024_2025-01-07
 
-boxcap <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/BatCaptures/survey123_BatCaptures_2024_v6.csv", 
+boxcap <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/BatCaptures/2024/Survey123/survey123_BatCaptures_2024_v6.csv", 
     col_types = cols(ObjectID = col_skip()))
 # 78 obs 25
 
-boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2024/Bat Box Site Overview v3.xlsx")
+boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2024/Uncleaned Overview/Bat Box Site Overview v3.xlsx")
 # 69 obs 20
 
 sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2024/Survery123/survey123_BatBoxOverview_2024_v6.csv")
@@ -217,7 +217,7 @@ sbox1 <- sboxes %>%
 
 ## Now combine for all bat box location data
 boxdf <- full_join(box1,sbox1) %>% rename(BBid = Bid) 
-# 146 obs 
+# 146 obs 4 vars
 
 
 
@@ -269,11 +269,13 @@ boxdf1 <- boxdf %>% mutate(
     ))) %>% 
   dplyr::select(-loc) 
 
+unique(boxdf$loc)
 levels(boxdf1$Locality)
 levels(boxdf1$LocalCode)
+list(levels(boxdf1$Locality))
 
+table(boxdf1$Locality)
 
-## 
 ## Now check that the location information makes sense
 ##
 
@@ -286,7 +288,11 @@ crs(boxdf2$geometry)
 # plot(boxdf2)
 
 mapview(boxdf2)
-levels(boxdf1$)
+output_today
+
+st_write(boxdf2, 
+         "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2024_2025-08-26/batboxes_2025.kml", 
+         driver = "KML", delete_layer = TRUE)
 
 # Looks right!Locality# Looks right!! 
 summary(boxdf2$Locality)
@@ -374,7 +380,6 @@ ggplot(DF) +
 
 # write.csv(DF, file = file.path(output_today, "BatCaptureData_w_Locations_2024_simplecolumns.csv"))
 # 08.01.2025
-
 DF1 <- DF %>% 
   dplyr::select(c(ubid, BandNumber, Date, datetime, Crew,
                   BBid, Locality, LocalCode, 
