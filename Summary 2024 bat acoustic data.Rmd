@@ -1,0 +1,224 @@
+---
+title: "Summary 2024 bat acoustic data"
+output: html_document
+date: "2025-11-04"
+---
+
+
+## Background
+
+The input files is the compiled manual IDs from Mara, prepared by Andrea 
+
+```{r}
+#### Load libraries ####
+library(data.table)
+library(tidyverse)
+library(beepr)
+library(lubridate)
+library(purrr)
+library(renv)
+library(stringr)
+library(janitor)
+library(readr)
+library(readxl)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(mapview)
+library(sf)
+library(sp)
+library(maps)
+library(leaflet)
+library(randomcoloR)
+library(wesanderson)
+library(leaflegend)
+library(osmdata)
+library(MetBrewer)
+library(colorBlindness)
+library(colorblindcheck)
+library(ggmap)
+library(maptools)
+library(spatstat)
+
+## Set up output directory
+
+output <-"C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed" # where you want to save your data
+
+file.name <- "AcousticSummary2024"
+
+todays_date <- Sys.Date()
+ 
+
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/AcousticSummary2024_2025-11-04
+
+all_files <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Inputs/Rogaland_Manual_ID2024.csv", 
+     col_types = cols(...1 = col_skip()))
+
+
+```
+
+
+```{r}
+all_files2<- all_files %>% dplyr::select(DURATION,DATE,TIME,HOUR, DATE.12, TIME.12, HOUR.12,
+                                         AUTO.ID,PULSES, MATCHING, MATCH.RATIO,MARGIN,       
+                                         ALTERNATE.1, ALTERNATE.2, N, MANUAL.ID, WINDFARM, TURBINE) %>% 
+  filter(nzchar(MANUAL.ID)) %>% 
+  filter(!is.na(MANUAL.ID)) %>% 
+  filter(!(MANUAL.ID %in% c("Noise")))
+names(all_files2)
+# Check the number of rows
+nrow(all_files2)
+ 
+ 
+# Separate each species from each observation into a new column, correct some names in MANUAL.ID to avoid empty spaces
+all_files2<- all_files2 %>% mutate(MANUAL.ID.O= MANUAL.ID) %>%  
+  separate(MANUAL.ID, 
+           into= c("MANUAL.ID1", "MANUAL.ID2", "MANUAL.ID3", "NOTES"), 
+           sep = "_") %>%
+  mutate(MANUAL.ID1 = ifelse(MANUAL.ID1 == " MYSP", "MYSP",
+                             ifelse(MANUAL.ID1 == " ENIL.S", "ENIL.S", 
+                                    MANUAL.ID1)))
+ 
+unique(all_files2$MANUAL.ID1)
+unique(all_files2$MANUAL.ID2)
+unique(all_files2$MANUAL.ID3)
+head(all_files2)
+ 
+# Separate as different observation into a new row when more than one species was observed in a recording
+all_files2 <- all_files2 %>%
+  pivot_longer(
+    cols = c("MANUAL.ID1", "MANUAL.ID2", "MANUAL.ID3"),
+    names_to = "Manual_type",
+    values_to = "MANUAL.ID"
+  ) %>%  dplyr::select(!Manual_type) %>% 
+  filter(!is.na(MANUAL.ID)) # filter the rows with NAs, that were created when pivoting from empty MANUAL.ID2,MANUAL.ID3
+ 
+nrow(all_files2) #78261
+head(all_files2)
+ 
+ 
+# Rename to have consistent names, two letters for genus and two for species, correct lower cases to upper cases
+ 
+all_files2 <- all_files2 %>% separate(MANUAL.ID, into = c("MANUAL.ID", "MANAUL.ID.NOTES"), 
+                                      sep = "[^[:alnum:]]", extra = "merge") %>% 
+  mutate(MANUAL.ID= ifelse(MANUAL.ID %in% c("enil", "ENL", "ENIL"), "EPNI",
+                           ifelse(MANUAL.ID %in% c("ppyg", "PPYG"), "PIPY",
+                                  ifelse(MANUAL.ID %in% c("mysp", "MYSB"), "MYSP", 
+                                         ifelse(MANUAL.ID %in% c("NNOC"), "NYNO", 
+                                                ifelse(MANUAL.ID %in% c("PNAT"), "PINA",
+                                                       ifelse(MANUAL.ID %in% c("VMUR"), "VEMU",
+                                                              MANUAL.ID)))))))
+ 
+unique(all_files2$MANUAL.ID)
+head(all_files2)
+unique(all_files2$MANAUL.ID.NOTES)
+ 
+# Rename Data set 
+rog.batdata<- all_files2
+ 
+# Make names correspond between auto.id with the manual.id 
+# EPTNIL = EPNI
+# VESMUR = VMUR
+# BARBAR = BABA THIS SP IS NOT PRESENT IN THIS DATA SET AS MANUAL ID
+# PLEARU = PAUR 
+# NYCNOC = NYNO 
+# PIPPYG = PIPY 
+# PIPNAT = PINA
+# MYODAU = MYSP
+# MYOBRA = MYSP
+# MYOMYS = MYSP
+# MYONAT = MYSP
+# ----------------------------------------------------------------------------------#
+ 
+rog.batdata %>%  dplyr::select(AUTO.ID) %>%  distinct()
+ 
+names(rog.batdata)
+rog.batdata<-rog.batdata %>% mutate(AUTO.ID= ifelse(AUTO.ID== "BARBAR", "BABA", 
+                                                    ifelse(AUTO.ID== "VESMUR", "VEMU", 
+                                                           ifelse(AUTO.ID== "EPTNIL", "EPNI",
+                                                                  ifelse(AUTO.ID== "NYCNOC", "NYNO",
+                                                                         ifelse(AUTO.ID== "PLEAUR", "PAUR",
+                                                                                ifelse(AUTO.ID== "PIPPYG", "PIPY",
+                                                                                       ifelse(AUTO.ID== "PIPNAT", "PINA", 
+                                                                                              #ifelse(AUTO.ID ==  "PIPPIP","MR1", # NOT IN Rogaland AUTO ID SO FAR
+                                                                                              ifelse(AUTO.ID==  "MYODAU", "MYSP",
+                                                                                                     ifelse(AUTO.ID==  "MYOBRA", "MYSP",
+                                                                                                            ifelse(AUTO.ID==  "MYOMYS", "MYSP",
+                                                                                                                   ifelse(AUTO.ID==  "MYONAT", "MYSP",
+                                                                                                                          AUTO.ID))))))))))))
+
+summary(rog.batdata)
+head(rog.batdata)
+
+DF <- rog.batdata %>% 
+  mutate(manualid = factor(MANUAL.ID),
+         turbine = factor(TURBINE), 
+         windfarm = factor(WINDFARM),
+         month = factor(month(DATE))) %>% 
+  mutate(month = factor(case_when(
+    month == "6" ~ "June", 
+    month == "7" ~ "July",
+    month == "8" ~ "August", 
+    month == "9" ~ "September", 
+    month == "10" ~ "October"
+  ))) %>% 
+  dplyr::select(-MANUAL.ID, -TURBINE, -WINDFARM) %>% droplevels()
+
+summary(DF$month)
+
+```
+
+
+```{r}
+
+DF1 <- DF %>% filter(manualid %in% c("EPNI", "PINA")) %>% droplevels()
+
+enil <- DF %>% filter(manualid == "EPNI") %>% droplevels()
+
+pnat <- DF %>% filter(manualid == "PINA") %>% droplevels()
+
+ggplot(DF1, aes(x = DATE, color = manualid)) + 
+  stat_count(geom = "point", aes(y = ..count..), size = 3) +
+  theme_minimal() + 
+  scale_color_manual(values = c("orange", "turquoise")) +
+  facet_wrap(~manualid, nrow = 2) 
+
+
+enil.plot <- ggplot(enil, aes(x = DATE)) + 
+  stat_count(geom = "point", aes(y = ..count..),
+             color = "orange", size = 4) +
+  ylab("N recordings across all wind farms") + 
+  xlab("") + 
+  ggtitle("Northern bat (Eptesicus nilssonii) activity 2024") + 
+  theme_minimal() 
+  # 50,568 observations in total 
+
+summary(enil$DATE)
+#         Min.      1st Qu.       Median         Mean      3rd Qu.         Max. 
+# "2024-06-20" "2024-07-31" "2024-08-12" "2024-08-08" "2024-08-21" "2024-10-05"
+
+## Use this as the basis for the x axis for the PNAT figure
+
+pnat.plot <- ggplot(pnat, aes(x = DATE)) + 
+  stat_count(geom = "point", aes(y = ..count..),
+             color = "turquoise", size = 4) +
+  scale_x_date(
+    limits = as.Date(c("2024-06-20", "2024-10-05"))) + 
+  ylab("N recordings across all wind farms") + 
+  xlab("") + 
+  ggtitle("Nathusius' pipistrelle (Pipistrellus nathusii) activity 2024") + 
+  theme_minimal() 
+  # 50,568 observations in total 
+
+cowplot::plot_grid(enil.plot, pnat.plot, nrow = 2)
+
+```
+

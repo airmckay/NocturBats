@@ -7,6 +7,8 @@ date: "2025-01-09"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+ Hei Tuva this is an example
+
 
 # Sara's Masters thesis data prep and innitial overview
 
@@ -68,7 +70,7 @@ dir.create(output_today)
 output_today
 # For example: 
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/OverviewProcessedBatData_Sara2025_2025-01-09"
-
+## This is also a change... 
 ```
 
 ## Read in the processed data and look for potential errors 
