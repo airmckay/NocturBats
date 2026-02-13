@@ -109,7 +109,7 @@ bcap <- cap %>%
          Species = "Bat species",
          Crew1 = 'Crew member filling in form', 
          Crew2 = 'Other - Crew member filling in form',
-         Crew3 = 'Crew member processing bat') %>% 
+         CrewProcessingBat = 'Crew member processing bat') %>% 
   mutate(BBid = factor(BBid), 
          MN_Site = factor(MN_Site),
          Sex = factor(Sex), 
@@ -117,9 +117,9 @@ bcap <- cap %>%
          Age= factor(Age), 
          Crew = paste0(Crew1, ",",
          Crew2, ",",
-         Crew3),
+         CrewProcessingBat),
          Date = as.Date(DateTime)) %>% 
-  dplyr::select(-c(Crew1, Crew2, Crew3)) 
+  dplyr::select(-c(Crew1, Crew2)) 
 
 summary(bcap)
 # [1] "Lista fyr"            "MO"                   "NMBU Sandnes- garden" "NMBU Sandnes-garden"  "SF"                  
@@ -274,28 +274,10 @@ bcap3 <- bcap2 %>%
 
 
 #  write.csv(bcap3, file = file.path(output_today, "cleaned_bat_box_captures_2025_simple_columns.csv"))
-# 145 obs 18 vars 
-# 12.02.2025
+# 145 obs 19 vars 
+# 13.02.2025
 
 ```
-
-
-## Bat band data 
-```{r}
-## First get the bat band report out 
-bands <- bcap3 %>% dplyr::filter(BandNumber != "NA") %>% droplevels()
-dim(bands)
-# 31 18
-
-bands$BandNumber <- factor(bands$BandNumber)
-summary(bands)
-
-## There are only 7 locations where bats were banded this year. I have a short deadline for submitting our bat band data to Stavanger Museum so I will manaually clean the rest of this in excel and adapt it to the submission form that they use. 
-
-write.csv(bands, file = file.path(output_today, "bandedbats_2025.csv")) 
-
-```
-
 
 
 ## Now clean the bat box data
@@ -453,6 +435,52 @@ plot1
 8+6
 
 ```
+
+
+
+## Bat band data 
+```{r}
+## First get the bat band report out 
+bands <- bcap3 %>% dplyr::filter(BandNumber != "NA") %>% dplyr::filter(BandNumber != "NA") %>% droplevels()
+bands <- bcap3 %>% dplyr::filter(BandNumber != "Na") %>% dplyr::filter(BandNumber != "NA") %>% droplevels()
+dim(bands)
+# 29 18
+
+bands$BandNumber <- factor(bands$BandNumber)
+summary(bands)
+
+## Change the date format so that it is in the format the folks at Stavanger museum want
+bands$date <- format(bands$Date, format = "%d.%m.%Y")
+head(bands$date)
+
+bands$time <- format(bands$datetime, "%H:%M")
+
+## There are only 7 locations where bats were banded this year. I have a short deadline for submitting our bat band data to Stavanger Museum so I will manually clean the rest of this in excel and adapt it to the submission form that they use. 
+
+## FYI - Juvenile bats would be 1k and adults are 1k + (1 cy+). There was only one Juvenile this year but I will add a column for this next year. 
+
+## Probably worth creating a processing crew column with full names
+##Anywhere that Abi was the processessor, I also mentioned that Mara was supervising in the report to Stavanger Museum
+
+## Now for the actual bat box locations
+
+subbox<- levels(bands$BBid)
+subbox
+# "BB-MO-082" "BB-MO-083" "BB-MO-216" "BB-MO-303" "BB-MO-304"
+
+## Now get the lat longs 
+mo_sub <- mosvatnet %>% dplyr::filter()
+
+bands1 <- left_join(bands, mo_sub)
+
+#write.csv(bands1, file = file.path(output_today, "bandedbats_2025.csv"))
+#write.csv(bands1, file = file.path(output_today, "bandedbats_2025_backup.csv"))
+# 29 of 25
+# 13.02.2026
+
+```
+
+
 
 
 ## Now combine bat capture data with the bat box location data 
