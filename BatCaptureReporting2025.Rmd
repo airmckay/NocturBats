@@ -67,18 +67,28 @@ dir.create(output_today)
 output_today
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Analyses/Outputs/Reed/CleanBatCaptureData2025_2026-02-12"
 
+## 2025 bat capture data 
 cap <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/BatCaptures/2025/Survery123_BatCaptures2025.xlsx")
 # 145 obs 35
 
+#2025 mist net site data
 nets <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/MistNetting/S123_MistNetSites_2025.xlsx")
 
 ("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/MistNetting/S123_MistNetSites_2025.xlsx")
 
+## 2024 bat box overview - hand punched from excel 
 boxes <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2024/Uncleaned Overview/Bat Box Site Overview v3.xlsx")
 # 69 obs 20
 
+## 2024 bat box overview - from survey 123
 sboxes <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2024/Survery123/survey123_BatBoxOverview_2024_v6.csv")
 # 81 obs 28
+
+## 2025 bat box overview - from survey 123
+sboxes25 <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2025/survey123_BatBoxOverview_2025.xlsx")
+
+## 2025 bat box maintenance - from survey 123
+sboxesM25 <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/BatBoxes/SiteInformation/2025/S123_BatBoxMaintenance_2025.xlsx")
 
 ```
 
@@ -277,6 +287,8 @@ bcap3 <- bcap2 %>%
 # 145 obs 19 vars 
 # 13.02.2025
 
+
+
 ```
 
 
@@ -297,6 +309,8 @@ box1 <- boxes %>%
                 Bid != "BB-RA-096", 
                 Bid != "BB-RE-007") %>% 
   droplevels()
+# 69 of 20
+
 levels(box1$Bid)
 
 # clean the Survey 123 bat box data
@@ -374,9 +388,111 @@ table(boxdf1$Locality)
 ## Now check that the location information makes sense
 ##
 
-## Convert lat longs to spatial objects
 
-boxdf2 <- st_as_sf(boxdf1, coords=c("lon", "lat"), crs = "+proj=latlong +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+
+#####################################################
+### Now add the new bat boxes from 2025 and change the location of any boxes that were moced (BB-MO-217, BB-MO-232)
+## What is the deal with BB-HO-201?
+
+## 9 new boxes from 2025 
+summary(sboxes25)
+names(sboxes25)
+
+
+sb25 <- sboxes25 %>% 
+  dplyr::rename(
+    BBid = 'Bat Box ID',
+    lat = "Latitude (N)", 
+    lon = "Longitude (E)",
+    Locality = Location) %>% 
+  dplyr::select(c(BBid, lat, lon, Locality)) %>% 
+  mutate(BBid = factor(BBid), 
+         Locality = factor(Locality)) %>% 
+  mutate(LocalCode = factor(case_when(
+    Locality == "Hanangervann (HA)" ~ "HA",
+    Locality == "Kviljo (KV)" ~ "KV"
+  )))
+    
+## Now merge these with the bat box data from 2024
+summary(boxdf1)
+summary(sb25)
+boxDF <- full_join(sb25,boxdf1)
+
+## Now update the moved boxes from 2025 
+sboxesM25$Bid <- factor(sboxesM25$'Box ID')
+levels(sboxesM25$Bid)
+news <- sboxesM25 %>% dplyr::filter(Bid %in% c("BB-MO-217", "BB-MO-232")) 
+## There is no new coordinates for these in the survey 123 notes but actually they were moved very close to the origina location... and no bats were found there. So it is not the end of hte world. 
+
+#now the bat capture data from mist net sites 
+
+names(nets)
+## We just need dates, site name, net name, net lat longs,
+
+# nets1 <- nets %>% 
+#   rename(site = "Site Name", 
+#          date = 'CreationDate', 
+#          captures = "Captures?",
+#          bycatch =  "Bycatches?",
+#          notes = "Notes",
+#          A_lat = "Net A Latitude",
+#          A_lon = "Net A Longitude",
+#          B_lat = "Net B Latitude",
+#          B_lon = "Net B Longitude",
+#          C_lat = "Net C Latitude",
+#          C_lon = "Net C Longitude",
+#          D_lat = "Net D Latitude",
+#          D_lon = "Net D Longitude") %>% 
+#     dplyr::select(c(site, date, captures, bycatch, notes,
+#                     A_lat, A_lon, B_lat, B_lon, 
+#                     C_lat, C_lon, D_lat, D_lon)) %>% 
+#   mutate(site = factor(site)) %>% 
+#   mutate(siteID = factor(case_when(
+#   site == "Litla Stokkavatnet" ~ "MN-LS",
+#   site == "Lista Fyr" ~ "MN-LI",
+#   site == "Mosvatnet" ~ "MN-MO", 
+#   site == "NMBU Sandnes-garden" ~ "MN-NM", 
+#   site == "Søndre Frøyland" ~ "MN-SO", 
+#   TRUE ~ "NoID"))) 
+# 
+# levels(nets1$siteID)
+# 
+# ## Create a column for Net Es (there were several, but no space in the S123 DS for this)
+# levels(nets1$site)
+# 
+# nets2 <- nets1 %>% mutate(E_lat = case_when(
+#                           siteID == "MN-MO" ~ "58.958278",
+#                           siteID == "MN-LS" ~ "58.97137",
+#                           siteID == "MN-SO" ~ "58.7416497",
+#                           TRUE ~ "")) %>%
+#                     mutate(E_lon = case_when(
+#                           siteID == "MN-MO" ~ "5.707521",
+#                           siteID == "MN-LS" ~ "5.68330",
+#                           siteID == "MN-SO" ~ "5.6637318",
+#                           TRUE ~ "")) 
+# 
+# nets2[7, "D_lat"] <- as.character(58.741509)
+# nets2[7, "D_lon"] <- as.character(5.6637318)
+# nets2[1, "D_lat"] <- as.character("")
+# nets2[2, "D_lat"] <- as.character("")
+# 
+# ## Now only select sites where we captured bats - also date and capture are not so helpful now. 
+# nets3 <- nets2 %>% dplyr::filter(
+#   siteID %in% c('MN-MO', 'MN-LS', 'MN-SO', 'MN-NM')) %>% 
+#   droplevels() %>% dplyr::select(-c(date, captures, bycatch, notes)) 
+# 
+# ## Now subset by site, lord help me 
+# 
+# LS <- nets3 %>% dplyr::filter(siteID=="MN-MO") %>% 
+#   dplyr::select(siteID, C_lat, C_lon) 
+#     droplevels()  
+  
+## Okay I am taking a break with this. I think I just need to enter the Mist net site net lat longs manually this year. 
+
+#write.csv(nets3, file = file.path(output_today, "net_locs_partial_2025.csv"))
+
+## Convert lat longs to spatial objects
+boxdf2 <- st_as_sf(boxDF, coords=c("lon", "lat"), crs = "+proj=latlong +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
 
 crs(boxdf2$geometry)
 
@@ -486,8 +602,22 @@ bands1 <- left_join(bands, mo_sub)
 ## Now combine bat capture data with the bat box location data 
 ```{r}
 #Bid is Bat ID and BBid is Bat Box ID 
-DF <- left_join(bcap3, boxdf1) %>% distinct()
-# 78 obs 18 vars 
+
+summary(bcap3)
+summary(boxDF)
+DF <- left_join(bcap3, boxDF) %>% distinct()
+# 145 obs 18 vars 
+
+## clean up date info 
+## Change the date format so that it is in the format the folks at Stavanger museum want
+bands$date <- format(bands$Date, format = "%d.%m.%Y")
+head(bands$date)
+
+bands$time <- format(bands$datetime, "%H:%M")
+
+write.csv(DF, file = file.path(output_today, "Semi-complete_batcapture_locs_2025.csv"))
+
+## I am going to add the MN site info separately in excel 
 
 summary(DF)
 # Innitially: Now we have an additional two observations... why? 
@@ -503,19 +633,19 @@ summary(DF)
 ## Duplicate Bids when bats are captured at the same bat box on different dates - therefore created a ubid (unique bat ID) combining Bid and Date 
 
  
-summary(DF)
-
-ggplot(DF) + 
-  geom_bar(aes(x = BBid, fill = Locality)) + 
-  scale_fill_manual(values = '
-                    c("#5b859e", "#1e395f", "#75884b", "#1e5a46", 
-                      "#df8d71", "#af4f2f", "#d48f90", "#732f30",
-                      "#ab84a5", "#59385c", "#d8b847")) + 
-  coord_flip() + 
-  theme_classic() + 
-  xlab("Bat box IDs") + 
-  ylab("Number of bats captured") + 
-  scale_y_continuous(breaks = seq(0, 10, by = 2)) 
+# summary(DF)
+# 
+# ggplot(DF) + 
+#   geom_bar(aes(x = BBid, fill = Locality)) + 
+#   scale_fill_manual(values = 
+#                     c("#5b859e", "#1e395f", "#75884b", "#1e5a46", 
+#                       "#df8d71", "#af4f2f", "#d48f90", "#732f30",
+#                       "#ab84a5", "#59385c", "#d8b847")) + 
+#   coord_flip() + 
+#   theme_classic() + 
+#   xlab("Bat box IDs") + 
+#   ylab("Number of bats captured") + 
+#   scale_y_continuous(breaks = seq(0, 10, by = 2)) 
 
 ## Looks good! Now clean the column names to make them more informative and easier to report to ArtsDatabanken
 
