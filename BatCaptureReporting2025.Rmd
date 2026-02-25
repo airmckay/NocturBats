@@ -276,16 +276,28 @@ head(bcap2$datetime)
 
 ## This is two hours behind what is recorded in the datasheets
 ## Create a unique bat ID 
+## Latin name for each bat species
+
 bcap3 <- bcap2 %>% 
   mutate(datetime = datetime + hours(2)) %>% 
   dplyr::select(-DateTime) %>% 
   mutate(Date = as.Date(datetime), 
-         ubid = factor(paste0(Bid, "-", Date))) 
+         ubid = factor(paste0(Bid, "-", Date))) %>% 
+  mutate(taxa = factor(case_when(
+    Species == "PPYG" ~ "Pipistrellus pygmaeus", 
+    Species == "PNAT" ~ "Pipistrellus nathusii",
+    Species == "MDAU" ~ "Myotis daubentonii",
+    Species == "ENIL" ~ "Eptesicus nilssonii"
+  )))
 
 
-#  write.csv(bcap3, file = file.path(output_today, "cleaned_bat_box_captures_2025_simple_columns.csv"))
-# 145 obs 19 vars 
-# 13.02.2025
+summary(bcap3)
+output_today
+
+
+# write.csv(bcap3, file = file.path(output_today, "cleaned_bat_box_captures_2025_simple_columns.csv"))
+# 145 obs 20 vars 
+# 23.02.2025
 
 
 
@@ -427,69 +439,63 @@ news <- sboxesM25 %>% dplyr::filter(Bid %in% c("BB-MO-217", "BB-MO-232"))
 #now the bat capture data from mist net sites 
 
 names(nets)
-## We just need dates, site name, net name, net lat longs,
+# We just need dates, site name, net name, net lat longs,
 
-# nets1 <- nets %>% 
-#   rename(site = "Site Name", 
-#          date = 'CreationDate', 
-#          captures = "Captures?",
-#          bycatch =  "Bycatches?",
-#          notes = "Notes",
-#          A_lat = "Net A Latitude",
-#          A_lon = "Net A Longitude",
-#          B_lat = "Net B Latitude",
-#          B_lon = "Net B Longitude",
-#          C_lat = "Net C Latitude",
-#          C_lon = "Net C Longitude",
-#          D_lat = "Net D Latitude",
-#          D_lon = "Net D Longitude") %>% 
-#     dplyr::select(c(site, date, captures, bycatch, notes,
-#                     A_lat, A_lon, B_lat, B_lon, 
-#                     C_lat, C_lon, D_lat, D_lon)) %>% 
-#   mutate(site = factor(site)) %>% 
-#   mutate(siteID = factor(case_when(
-#   site == "Litla Stokkavatnet" ~ "MN-LS",
-#   site == "Lista Fyr" ~ "MN-LI",
-#   site == "Mosvatnet" ~ "MN-MO", 
-#   site == "NMBU Sandnes-garden" ~ "MN-NM", 
-#   site == "Søndre Frøyland" ~ "MN-SO", 
-#   TRUE ~ "NoID"))) 
-# 
-# levels(nets1$siteID)
-# 
-# ## Create a column for Net Es (there were several, but no space in the S123 DS for this)
-# levels(nets1$site)
-# 
-# nets2 <- nets1 %>% mutate(E_lat = case_when(
-#                           siteID == "MN-MO" ~ "58.958278",
-#                           siteID == "MN-LS" ~ "58.97137",
-#                           siteID == "MN-SO" ~ "58.7416497",
-#                           TRUE ~ "")) %>%
-#                     mutate(E_lon = case_when(
-#                           siteID == "MN-MO" ~ "5.707521",
-#                           siteID == "MN-LS" ~ "5.68330",
-#                           siteID == "MN-SO" ~ "5.6637318",
-#                           TRUE ~ "")) 
-# 
-# nets2[7, "D_lat"] <- as.character(58.741509)
-# nets2[7, "D_lon"] <- as.character(5.6637318)
-# nets2[1, "D_lat"] <- as.character("")
-# nets2[2, "D_lat"] <- as.character("")
-# 
-# ## Now only select sites where we captured bats - also date and capture are not so helpful now. 
-# nets3 <- nets2 %>% dplyr::filter(
-#   siteID %in% c('MN-MO', 'MN-LS', 'MN-SO', 'MN-NM')) %>% 
-#   droplevels() %>% dplyr::select(-c(date, captures, bycatch, notes)) 
-# 
-# ## Now subset by site, lord help me 
-# 
-# LS <- nets3 %>% dplyr::filter(siteID=="MN-MO") %>% 
-#   dplyr::select(siteID, C_lat, C_lon) 
-#     droplevels()  
-  
-## Okay I am taking a break with this. I think I just need to enter the Mist net site net lat longs manually this year. 
+nets1 <- nets %>%
+  rename(site = "Site Name",
+         date = 'CreationDate',
+         captures = "Captures?",
+         bycatch =  "Bycatches?",
+         notes = "Notes",
+         A_lat = "Net A Latitude",
+         A_lon = "Net A Longitude",
+         B_lat = "Net B Latitude",
+         B_lon = "Net B Longitude",
+         C_lat = "Net C Latitude",
+         C_lon = "Net C Longitude",
+         D_lat = "Net D Latitude",
+         D_lon = "Net D Longitude") %>%
+    dplyr::select(c(site, date, captures, bycatch, notes,
+                    A_lat, A_lon, B_lat, B_lon,
+                    C_lat, C_lon, D_lat, D_lon)) %>%
+  mutate(site = factor(site)) %>%
+  mutate(siteID = factor(case_when(
+  site == "Litla Stokkavatnet" ~ "MN-LS",
+  site == "Lista Fyr" ~ "MN-LI",
+  site == "Mosvatnet" ~ "MN-MO",
+  site == "NMBU Sandnes-garden" ~ "MN-NM",
+  site == "Søndre Frøyland" ~ "MN-SO",
+  TRUE ~ "NoID")))
 
-#write.csv(nets3, file = file.path(output_today, "net_locs_partial_2025.csv"))
+levels(nets1$siteID)
+
+## Create a column for Net Es (there were several, but no space in the S123 DS for this)
+levels(nets1$site)
+
+nets2 <- nets1 %>% mutate(E_lat = case_when(
+                          siteID == "MN-MO" ~ "58.958278",
+                          siteID == "MN-LS" ~ "58.97137",
+                          siteID == "MN-SO" ~ "58.7416497",
+                          TRUE ~ "")) %>%
+                    mutate(E_lon = case_when(
+                          siteID == "MN-MO" ~ "5.707521",
+                          siteID == "MN-LS" ~ "5.68330",
+                          siteID == "MN-SO" ~ "5.6637318",
+                          TRUE ~ ""))
+
+nets2[7, "D_lat"] <- as.character(58.741509)
+nets2[7, "D_lon"] <- as.character(5.6637318)
+nets2[1, "D_lat"] <- as.character("")
+nets2[2, "D_lat"] <- as.character("")
+
+## Now only select sites where we captured bats - also date and capture are not so helpful now.
+nets3 <- nets2 %>% dplyr::filter(
+  siteID %in% c('MN-MO', 'MN-LS', 'MN-SO', 'MN-NM', "MN-LI")) %>%
+  droplevels() %>% dplyr::select(-c(date, captures, bycatch, notes))
+
+## Okay I am taking a break with this. I think I just need to enter the Mist net site net lat longs manually this year.
+
+# write.csv(nets3, file = file.path(output_today, "net_locs_partial_2025.csv"))
 
 ## Convert lat longs to spatial objects
 boxdf2 <- st_as_sf(boxDF, coords=c("lon", "lat"), crs = "+proj=latlong +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
@@ -609,15 +615,16 @@ DF <- left_join(bcap3, boxDF) %>% distinct()
 # 145 obs 18 vars 
 
 ## clean up date info 
-## Change the date format so that it is in the format the folks at Stavanger museum want
-bands$date <- format(bands$Date, format = "%d.%m.%Y")
-head(bands$date)
+## Change the date format so that it is in the format the folks at Stavanger museum AND Arts obs prefer
+DF$date <- format(DF$Date, format = "%d.%m.%Y")
+head(DF$date)
 
-bands$time <- format(bands$datetime, "%H:%M")
+DF$time <- format(DF$datetime, "%H:%M")
 
 write.csv(DF, file = file.path(output_today, "Semi-complete_batcapture_locs_2025.csv"))
+#145 obs of 26 vars 
 
-## I am going to add the MN site info separately in excel 
+## I am going to add the MN site info separately in excel - I promise to come up with a better solution before next season! 
 
 summary(DF)
 # Innitially: Now we have an additional two observations... why? 
@@ -651,34 +658,85 @@ summary(DF)
 
 # write.csv(DF, file = file.path(output_today, "BatCaptureData_w_Locations_2024_simplecolumns.csv"))
 # 08.01.2025
-DF1 <- DF %>% 
-  dplyr::select(c(ubid, BandNumber, Date, datetime, Crew,
-                  BBid, Locality, LocalCode, 
-                  lat, lon, 
-                  Bid, Species, 
-                  sex, Age, Repro, buccal,
-                  RFA, Weight)) %>% 
-  rename(UniqueBatID = ubid, 
-         SpeciesCode = Species,
-         DateTime = datetime, 
-         BatBoxID = BBid, 
-         Latitude = lat, 
-         Longitude = lon, 
-         BatID = Bid, 
-         Sex = sex,
-         Buccal = buccal) %>% 
-  rename('Right forearm length (mm)' = RFA, 
-         'Weight (g)' = Weight) %>% 
-  mutate(Species = factor(case_when(
-    SpeciesCode == "PPYG" ~ "Pipistrellus pygmaeus",
-    SpeciesCode == "PNAT" ~ "Pipistrellus nathusii"
-  ))) %>% 
-  mutate(Date_ArtsObs = strftime(Date, format = "%Y.%m.%d"))
-
-summary(DF1)
+# DF1 <- DF %>% 
+#   dplyr::select(c(ubid, BandNumber, Date, datetime, Crew,
+#                   BBid, Locality, LocalCode, 
+#                   lat, lon, 
+#                   Bid, Species, 
+#                   sex, Age, Repro, buccal,
+#                   RFA, Weight)) %>% 
+#   rename(UniqueBatID = ubid, 
+#          SpeciesCode = Species,
+#          DateTime = datetime, 
+#          BatBoxID = BBid, 
+#          Latitude = lat, 
+#          Longitude = lon, 
+#          BatID = Bid, 
+#          Sex = sex,
+#          Buccal = buccal) %>% 
+#   rename('Right forearm length (mm)' = RFA, 
+#          'Weight (g)' = Weight) %>% 
+#   mutate(Species = factor(case_when(
+#     SpeciesCode == "PPYG" ~ "Pipistrellus pygmaeus",
+#     SpeciesCode == "PNAT" ~ "Pipistrellus nathusii"
+#   ))) %>% 
+#   mutate(Date_ArtsObs = strftime(Date, format = "%Y.%m.%d"))
+# 
+# summary(DF1)
 
 # write.csv(DF1, file = file.path(output_today, "BatCaptureData_w_Locations_2024_Clear_Columns.csv"))
 # 08.01.2025
+
+```
+
+## After doing much cleaning in excel and submitting data to ArtsObs, collecting other observations that Mara had submitted as well - we now have all bat captures combined for 2025. This was unfortuntately not so frictionless this year - especially since there was a mix of paper and digital datasheets. 
+
+```{r}
+
+bats25 <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/BatLab Norway/Projects/Noctur/Data/ReportingBatCaptures/2025/MJD_BatCaptures_2025.csv")
+# 159 obs of 22 vars
+
+bats25 <- bats25 %>% mutate(Species = factor(Species), 
+                            Sex = factor(Sex), 
+                            Age = factor(Age),
+                            BandNumber = factor(BandNumber), 
+                            ReproductiveStatus = factor(ReproductiveStatus), 
+                            CaptureMethod = factor(`Capture method`), 
+                            Locality = factor(Locality), 
+                            Fylke = factor(Fylke)) 
+
+bats25$date <- format(bats25$Date, format = "%d.%m.%Y")
+levels(bats25$BandNumber)
+
+mn <- bats25 %>% filter(CaptureMethod=="Mist net") 
+bb <- bats25 %>% filter(CaptureMethod=="Bat box") %>% droplevels()
+
+ggplot(mn) + 
+  geom_bar(aes(x=Species)) + 
+  facet_wrap(~Fylke, nrow=2) + 
+  theme_bw(base_size = 18) + 
+  ylab("") 
+  ggtitle("Bats captured during mist net surveys in 2025")
+
+
+ggplot(bb) + 
+  geom_bar(aes(x=Fylke)) + 
+  facet_wrap(~Species) + 
+  theme_bw(base_size = 18) + 
+  ylab("") 
+  ggtitle("Bats captured during bat box surveys in 2025")
+  
+table(bats25$Species, bats25$CaptureMethod)
+  
+b25 <- st_as_sf(bats25, coords=c("Longitude", "Latitude"), crs = "+proj=latlong +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+143/159
+crs(b25$geometry)
+
+# plot(boxdf2)
+
+mapview(b25, zcol = "CaptureMethod")
+
+
 
 ```
 
